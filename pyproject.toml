@@ -18,6 +18,14 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "poethepoet>=0.36.0",
     "pre-commit>=4.2.0",
     "ruff>=0.12.4",
+    "ty>=0.0.1a14",
 ]
+
+[tool.poe.tasks]
+start = "uv run python -u main.py"
+lint = "uv run ruff check ."
+fmt = "uv run ruff format ."
+check = "uv run ty check"
