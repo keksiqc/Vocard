@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,11 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from typing import Dict, List, Any, Union
+from typing import Any
 
 
 class Settings:
-    def __init__(self, settings: Dict) -> None:
+    def __init__(self, settings: dict) -> None:
         self.token: str = settings.get("token")
         self.client_id: int = int(settings.get("client_id", 0))
         self.genius_token: str = settings.get("genius_token")
@@ -33,32 +34,18 @@ class Settings:
         self.mongodb_name: str = settings.get("mongodb_name")
 
         self.invite_link: str = "https://discord.gg/wRCgB7vBQv"
-        self.nodes: Dict[str, Dict[str, Union[str, int, bool]]] = settings.get(
-            "nodes", {}
-        )
+        self.nodes: dict[str, dict[str, str | int | bool]] = settings.get("nodes", {})
         self.max_queue: int = settings.get("default_max_queue", 1000)
         self.bot_prefix: str = settings.get("prefix", "")
-        self.activity: List[Dict[str, str]] = settings.get(
-            "activity", [{"listen": "/help"}]
-        )
-        self.logging: Dict[Union[str, Dict[str, Union[str, bool]]]] = settings.get(
-            "logging", {}
-        )
+        self.activity: list[dict[str, str]] = settings.get("activity", [{"listen": "/help"}])
+        self.logging: dict[str | dict[str, str | bool]] = settings.get("logging", {})
         self.embed_color: str = int(settings.get("embed_color", "0xb3b3b3"), 16)
-        self.bot_access_user: List[int] = settings.get("bot_access_user", [])
-        self.sources_settings: Dict[Dict[str, str]] = settings.get(
-            "sources_settings", {}
-        )
-        self.cooldowns_settings: Dict[str, List[int]] = settings.get("cooldowns", {})
-        self.aliases_settings: Dict[str, List[str]] = settings.get("aliases", {})
-        self.controller: Dict[str, Dict[str, Any]] = settings.get(
-            "default_controller", {}
-        )
-        self.voice_status_template: str = settings.get(
-            "default_voice_status_template", ""
-        )
+        self.bot_access_user: list[int] = settings.get("bot_access_user", [])
+        self.sources_settings: dict[dict[str, str]] = settings.get("sources_settings", {})
+        self.cooldowns_settings: dict[str, list[int]] = settings.get("cooldowns", {})
+        self.aliases_settings: dict[str, list[str]] = settings.get("aliases", {})
+        self.controller: dict[str, dict[str, Any]] = settings.get("default_controller", {})
+        self.voice_status_template: str = settings.get("default_voice_status_template", "")
         self.lyrics_platform: str = settings.get("lyrics_platform", "A_ZLyrics").lower()
-        self.ipc_client: Dict[str, Union[str, bool, int]] = settings.get(
-            "ipc_client", {}
-        )
+        self.ipc_client: dict[str, str | bool | int] = settings.get("ipc_client", {})
         self.version: str = settings.get("version", "")

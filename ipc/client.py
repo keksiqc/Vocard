@@ -1,10 +1,10 @@
-import aiohttp
 import asyncio
 import logging
-import function as func
 
+import aiohttp
 from discord.ext import commands
-from typing import Optional
+
+import function as func
 
 from .methods import process_methods
 
@@ -31,12 +31,10 @@ class IPCClient:
         self._is_connecting: bool = False
         self._logger: logging.Logger = logging.getLogger("ipc_client")
 
-        self._websocket_url: str = (
-            f"{'wss' if self._is_secure else 'ws'}://{self._host}:{self._port}/ws_bot"
-        )
-        self._session: Optional[aiohttp.ClientSession] = None
-        self._websocket: Optional[aiohttp.ClientWebSocketResponse] = None
-        self._task: Optional[asyncio.Task] = None
+        self._websocket_url: str = f"{'wss' if self._is_secure else 'ws'}://{self._host}:{self._port}/ws_bot"
+        self._session: aiohttp.ClientSession | None = None
+        self._websocket: aiohttp.ClientWebSocketResponse | None = None
+        self._task: asyncio.Task | None = None
 
         self._heanders = {
             "Authorization": self._password,
@@ -65,7 +63,7 @@ class IPCClient:
             else:
                 self._bot.loop.create_task(process_methods(self, self._bot, msg.json()))
 
-    async def send(self, data: dict):
+    async def send(self, data: dict) -> None:
         if self.is_connected:
             try:
                 await self._websocket.send_json(data)
@@ -76,7 +74,7 @@ class IPCClient:
                 await self._websocket.send_json(data)
                 self._logger.debug(f"Send Message: {data}")
 
-    async def send(self, data: dict):
+    async def send(self, data: dict) -> None:
         # Check if the websocket is still open
         if self.is_connected:
             try:
@@ -90,7 +88,7 @@ class IPCClient:
         else:
             self._logger.warning("WebSocket is not connected or already closed.")
 
-    async def _handle_reconnect(self, data: dict):
+    async def _handle_reconnect(self, data: dict) -> None:
         await self.disconnect()
         await self.connect()
         await asyncio.sleep(1)  # Optional delay before retrying
@@ -109,7 +107,7 @@ class IPCClient:
                 self._session = aiohttp.ClientSession()
 
             if self._is_connecting or self._is_connected:
-                return
+                return None
 
             self._is_connecting = True
             self._websocket = await self._session.ws_connect(
@@ -125,14 +123,10 @@ class IPCClient:
             raise Exception("Connection failed.")
 
         except aiohttp.WSServerHandshakeError:
-            self._logger.error(
-                "Access forbidden: Missing bot ID, version mismatch, or invalid password."
-            )
+            self._logger.error("Access forbidden: Missing bot ID, version mismatch, or invalid password.")
 
         except Exception as e:
-            self._logger.error(
-                "Error occurred while connecting to dashboard.", exc_info=e
-            )
+            self._logger.error("Error occurred while connecting to dashboard.", exc_info=e)
 
         finally:
             self._is_connecting = False

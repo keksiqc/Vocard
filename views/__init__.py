@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -30,12 +31,12 @@ class ButtonOnCooldown(commands.CommandError):
 
 
 from .controller import InteractiveController
-from .search import SearchView
+from .debug import DebugView
+from .embedBuilder import EmbedBuilderView
 from .help import HelpView
+from .inbox import InboxView
+from .link import LinkView
 from .list import ListView
 from .lyrics import LyricsView
 from .playlist import PlaylistView
-from .inbox import InboxView
-from .link import LinkView
-from .debug import DebugView
-from .embedBuilder import EmbedBuilderView
+from .search import SearchView

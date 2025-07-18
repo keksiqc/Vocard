@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,22 +22,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import discord
-import json
-import os
 import copy
+import json
 import logging
-
-from discord.ext import commands
+import os
 from time import strptime
-from addons import Settings
+from typing import Any
 
-from typing import Optional, Union, Dict, Any
-
+import discord
+from discord.ext import commands
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
 )
+
+from addons import Settings
+
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -52,9 +53,7 @@ SETTINGS_DB: AsyncIOMotorCollection
 USERS_DB: AsyncIOMotorCollection
 
 LANGS: dict[str, dict[str, str]] = {}  # Stores all the languages in ./langs
-LOCAL_LANGS: dict[
-    str, dict[str, str]
-] = {}  # Stores all the localization languages in ./local_langs
+LOCAL_LANGS: dict[str, dict[str, str]] = {}  # Stores all the localization languages in ./local_langs
 SETTINGS_BUFFER: dict[int, dict[str, Any]] = {}  # Cache guild language
 USERS_BUFFER: dict[str, dict] = {}
 
@@ -112,11 +111,7 @@ def langs_setup() -> None:
 
     for language in os.listdir(os.path.join(ROOT_DIR, "local_langs")):
         if language.endswith(".json"):
-            LOCAL_LANGS[language[:-5]] = open_json(
-                os.path.join("local_langs", language)
-            )
-
-    return
+            LOCAL_LANGS[language[:-5]] = open_json(os.path.join("local_langs", language))
 
 
 def time(millis: int) -> str:
@@ -127,10 +122,9 @@ def time(millis: int) -> str:
 
     if days > 0:
         return "%d days, %02d:%02d:%02d" % (days, hours, minutes, seconds)
-    elif hours > 0:
+    if hours > 0:
         return "%d:%02d:%02d" % (hours, minutes, seconds)
-    else:
-        return "%02d:%02d" % (minutes, seconds)
+    return "%02d:%02d" % (minutes, seconds)
 
 
 def format_time(number: str) -> int:
@@ -155,13 +149,11 @@ def get_source(source: str, type: str) -> str:
     return source_settings.get(type)
 
 
-def cooldown_check(ctx: commands.Context) -> Optional[commands.Cooldown]:
+def cooldown_check(ctx: commands.Context) -> commands.Cooldown | None:
     if ctx.author.id in settings.bot_access_user:
         return None
     cooldown = settings.cooldowns_settings.get(
-        f"{ctx.command.parent.qualified_name} {ctx.command.name}"
-        if ctx.command.parent
-        else ctx.command.name
+        f"{ctx.command.parent.qualified_name} {ctx.command.name}" if ctx.command.parent else ctx.command.name
     )
     if not cooldown:
         return None
@@ -180,7 +172,7 @@ def truncate_string(text: str, length: int = 40) -> str:
     return text[: length - 3] + "..." if len(text) > length else text
 
 
-def get_lang_non_async(guild_id: int, *keys) -> Union[list[str], str]:
+def get_lang_non_async(guild_id: int, *keys) -> list[str] | str:
     settings = SETTINGS_BUFFER.get(guild_id, {})
     lang = settings.get("lang", "EN")
     if lang in LANGS and not LANGS[lang]:
@@ -191,15 +183,14 @@ def get_lang_non_async(guild_id: int, *keys) -> Union[list[str], str]:
     return [LANGS.get(lang, {}).get(key, "Language pack not found!") for key in keys]
 
 
-def format_bytes(bytes: int, unit: bool = False):
+def format_bytes(bytes: int, unit: bool = False) -> str:
     if bytes <= 1_000_000_000:
         return f"{bytes / (1024**2):.1f}" + ("MB" if unit else "")
 
-    else:
-        return f"{bytes / (1024**3):.1f}" + ("GB" if unit else "")
+    return f"{bytes / (1024**3):.1f}" + ("GB" if unit else "")
 
 
-async def get_lang(guild_id: int, *keys) -> Optional[Union[list[str], str]]:
+async def get_lang(guild_id: int, *keys) -> list[str] | str | None:
     settings = await get_settings(guild_id)
     lang = settings.get("lang", "EN")
     if lang in LANGS and not LANGS[lang]:
@@ -211,13 +202,13 @@ async def get_lang(guild_id: int, *keys) -> Optional[Union[list[str], str]]:
 
 
 async def send(
-    ctx: Union[commands.Context, discord.Interaction],
-    content: Union[str, discord.Embed] = None,
+    ctx: commands.Context | discord.Interaction,
+    content: str | discord.Embed = None,
     *params,
     view: discord.ui.View = None,
-    delete_after: float = None,
+    delete_after: float | None = None,
     ephemeral: bool = False,
-) -> Optional[discord.Message]:
+) -> discord.Message | None:
     if content is None:
         content = "No content provided."
 
@@ -227,10 +218,7 @@ async def send(
         text = None
     else:
         text = await get_lang(ctx.guild.id, content)
-        if text:
-            text = text.format(*params)
-        else:
-            text = content.format(*params)
+        text = text.format(*params) if text else content.format(*params)
         embed = None
 
     # Determine the sending function
@@ -244,9 +232,7 @@ async def send(
 
     # Check settings for delete_after duration
     settings = await get_settings(ctx.guild.id)
-    if settings and ctx.channel.id == settings.get("music_request_channel", {}).get(
-        "text_channel_id"
-    ):
+    if settings and ctx.channel.id == settings.get("music_request_channel", {}).get("text_channel_id"):
         delete_after = 10
 
     # Send the message or embed
@@ -268,9 +254,7 @@ async def send(
     )
 
 
-async def update_db(
-    db: AsyncIOMotorCollection, tempStore: dict, filter: dict, data: dict
-) -> bool:
+async def update_db(db: AsyncIOMotorCollection, tempStore: dict, filter: dict, data: dict) -> bool:
     for mode, action in data.items():
         for key, value in action.items():
             cursors = key.split(".")
@@ -302,18 +286,14 @@ async def update_db(
             elif mode == "$push":
                 if isinstance(value, dict) and "$each" in value:
                     nested_data.setdefault(cursors[-1], []).extend(value["$each"])
-                    nested_data[cursors[-1]] = nested_data[cursors[-1]][
-                        value.get("$slice", len(value["$each"])) :
-                    ]
+                    nested_data[cursors[-1]] = nested_data[cursors[-1]][value.get("$slice", len(value["$each"])) :]
                 else:
                     nested_data.setdefault(cursors[-1], []).extend([value])
 
             elif mode == "$pull":
                 if cursors[-1] in nested_data:
                     value = value.get("$in", []) if isinstance(value, dict) else [value]
-                    nested_data[cursors[-1]] = [
-                        item for item in nested_data[cursors[-1]] if item not in value
-                    ]
+                    nested_data[cursors[-1]] = [item for item in nested_data[cursors[-1]] if item not in value]
 
             else:
                 return False
@@ -323,7 +303,7 @@ async def update_db(
 
 
 async def get_settings(guild_id: int) -> dict[str, Any]:
-    settings = SETTINGS_BUFFER.get(guild_id, None)
+    settings = SETTINGS_BUFFER.get(guild_id)
     if not settings:
         settings = await SETTINGS_DB.find_one({"_id": guild_id})
         if not settings:
@@ -338,9 +318,7 @@ async def update_settings(guild_id: int, data: dict[str, dict[str, Any]]) -> boo
     return await update_db(SETTINGS_DB, settings, {"_id": guild_id}, data)
 
 
-async def get_user(
-    user_id: int, d_type: Optional[str] = None, need_copy: bool = True
-) -> Dict[str, Any]:
+async def get_user(user_id: int, d_type: str | None = None, need_copy: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
         user = await USERS_DB.find_one({"_id": user_id})

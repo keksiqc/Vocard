@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,15 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import discord
 import re
-import voicelink
-import addons
-import views
-import function as func
 
+import discord
 from discord.ext import commands
-from typing import Dict, Type
+
+import addons
+import function as func
+import views
+import voicelink
 
 
 def key(interaction: discord.Interaction):
@@ -37,16 +38,12 @@ def key(interaction: discord.Interaction):
 
 
 class ControlButton(discord.ui.Button):
-    def __init__(self, player, label: str = None, **kwargs):
+    def __init__(self, player, label: str | None = None, **kwargs):
         self.player: voicelink.Player = player
 
-        self.disable_button_text: bool = func.settings.controller.get(
-            "disableButtonText", False
-        )
+        self.disable_button_text: bool = func.settings.controller.get("disableButtonText", False)
         super().__init__(
-            label=self.player.get_msg(label)
-            if label and not self.disable_button_text
-            else None,
+            label=self.player.get_msg(label) if label and not self.disable_button_text else None,
             **kwargs,
         )
 
@@ -74,9 +71,7 @@ class Back(ControlButton):
         super().__init__(
             emoji="⏮️",
             label="buttonBack",
-            disabled=False
-            if kwargs["player"].queue.history() or not kwargs["player"].current
-            else True,
+            disabled=not (kwargs["player"].queue.history() or not kwargs["player"].current),
             **kwargs,
         )
 
@@ -84,20 +79,17 @@ class Back(ControlButton):
         if not self.player.is_privileged(interaction.user):
             if interaction.user in self.player.previous_votes:
                 return await self.send(interaction, "voted", ephemeral=True)
+            self.player.previous_votes.add(interaction.user)
+            if len(self.player.previous_votes) >= (required := self.player.required()):
+                pass
             else:
-                self.player.previous_votes.add(interaction.user)
-                if len(self.player.previous_votes) >= (
-                    required := self.player.required()
-                ):
-                    pass
-                else:
-                    return await self.send(
-                        interaction,
-                        "backVote",
-                        interaction.user,
-                        len(self.player.previous_votes),
-                        required,
-                    )
+                return await self.send(
+                    interaction,
+                    "backVote",
+                    interaction.user,
+                    len(self.player.previous_votes),
+                    required,
+                )
 
         if not self.player.is_playing:
             self.player.queue.backto(1)
@@ -110,6 +102,7 @@ class Back(ControlButton):
 
         if self.player.queue._repeat.mode == voicelink.LoopType.TRACK:
             await self.player.set_repeat(voicelink.LoopType.OFF)
+        return None
 
 
 class Resume(ControlButton):
@@ -131,22 +124,22 @@ class Resume(ControlButton):
         if not self.player.is_privileged(interaction.user):
             if interaction.user in votes:
                 return await self.send(interaction, "voted", ephemeral=True)
-            else:
-                votes.add(interaction.user)
-                if len(votes) < (required := self.player.required()):
-                    return await self.send(
-                        interaction,
-                        f"{vote_type}Vote",
-                        interaction.user,
-                        len(votes),
-                        required,
-                    )
+            votes.add(interaction.user)
+            if len(votes) < (required := self.player.required()):
+                return await self.send(
+                    interaction,
+                    f"{vote_type}Vote",
+                    interaction.user,
+                    len(votes),
+                    required,
+                )
 
         self.emoji = emoji
         if not self.disable_button_text:
             self.label = await func.get_lang(interaction.guild.id, button)
         await self.player.set_pause(is_paused, interaction.user)
         await interaction.response.edit_message(view=self.view)
+        return None
 
 
 class Skip(ControlButton):
@@ -155,7 +148,7 @@ class Skip(ControlButton):
 
     async def callback(self, interaction: discord.Interaction):
         if not self.player.is_playing:
-            return
+            return None
         if not self.player.is_privileged(interaction.user):
             if interaction.user == self.player.current.requester:
                 pass
@@ -179,6 +172,7 @@ class Skip(ControlButton):
         if self.player.queue._repeat.mode == voicelink.LoopType.TRACK:
             await self.player.set_repeat(voicelink.LoopType.OFF)
         await self.player.stop()
+        return None
 
 
 class Stop(ControlButton):
@@ -189,23 +183,21 @@ class Stop(ControlButton):
         if not self.player.is_privileged(interaction.user):
             if interaction.user in self.player.stop_votes:
                 return await self.send(interaction, "voted", ephemeral=True)
+            self.player.stop_votes.add(interaction.user)
+            if len(self.player.stop_votes) >= (required := self.player.required(leave=True)):
+                pass
             else:
-                self.player.stop_votes.add(interaction.user)
-                if len(self.player.stop_votes) >= (
-                    required := self.player.required(leave=True)
-                ):
-                    pass
-                else:
-                    return await self.send(
-                        interaction,
-                        "leaveVote",
-                        interaction.user,
-                        len(self.player.stop_votes),
-                        required,
-                    )
+                return await self.send(
+                    interaction,
+                    "leaveVote",
+                    interaction.user,
+                    len(self.player.stop_votes),
+                    required,
+                )
 
         await self.send(interaction, "left", interaction.user)
         await self.player.teardown()
+        return None
 
 
 class Add(ControlButton):
@@ -221,15 +213,11 @@ class Add(ControlButton):
         user = await func.get_user(interaction.user.id, "playlist")
         rank, max_p, max_t = func.check_roles()
         if len(user["200"]["tracks"]) >= max_t:
-            return await self.send(
-                interaction, "playlistlimited", max_t, ephemeral=True
-            )
+            return await self.send(interaction, "playlistlimited", max_t, ephemeral=True)
 
         if track.track_id in user["200"]["tracks"]:
             return await self.send(interaction, "playlistrepeated", ephemeral=True)
-        respond = await func.update_user(
-            interaction.user.id, {"$push": {"playlist.200.tracks": track.track_id}}
-        )
+        respond = await func.update_user(interaction.user.id, {"$push": {"playlist.200.tracks": track.track_id}})
         if respond:
             await self.send(
                 interaction,
@@ -241,6 +229,7 @@ class Add(ControlButton):
             )
         else:
             await self.send(interaction, "playlistAddError2", ephemeral=True)
+        return None
 
 
 class Loop(ControlButton):
@@ -269,6 +258,7 @@ class Loop(ControlButton):
 
         await interaction.response.edit_message(view=self.view)
         await self.send(interaction, "repeat", mode.name.capitalize())
+        return None
 
 
 class VolumeUp(ControlButton):
@@ -283,6 +273,7 @@ class VolumeUp(ControlButton):
         await self.player.set_volume(value, interaction.user)
 
         await self.send(interaction, "setVolume", value, ephemeral=True)
+        return None
 
 
 class VolumeDown(ControlButton):
@@ -297,15 +288,14 @@ class VolumeDown(ControlButton):
         await self.player.set_volume(value, interaction.user)
 
         await self.send(interaction, "setVolume", value, ephemeral=True)
+        return None
 
 
 class VolumeMute(ControlButton):
     def __init__(self, **kwargs):
         super().__init__(
             emoji="🔇" if kwargs["player"].volume else "🔈",
-            label="buttonVolumeMute"
-            if kwargs["player"].volume
-            else "buttonVolumeUnmute",
+            label="buttonVolumeMute" if kwargs["player"].volume else "buttonVolumeUnmute",
             **kwargs,
         )
 
@@ -324,6 +314,7 @@ class VolumeMute(ControlButton):
 
         await self.player.set_volume(value, interaction.user)
         await interaction.response.edit_message(view=self.view)
+        return None
 
 
 class AutoPlay(ControlButton):
@@ -339,13 +330,12 @@ class AutoPlay(ControlButton):
         await self.send(
             interaction,
             "autoplay",
-            await func.get_lang(
-                interaction.guild_id, "enabled" if check else "disabled"
-            ),
+            await func.get_lang(interaction.guild_id, "enabled" if check else "disabled"),
         )
 
         if not self.player.is_playing:
             await self.player.do_next()
+        return None
 
 
 class Shuffle(ControlButton):
@@ -356,23 +346,21 @@ class Shuffle(ControlButton):
         if not self.player.is_privileged(interaction.user):
             if interaction.user in self.player.shuffle_votes:
                 return await self.send(interaction, "voted", ephemeral=True)
+            self.player.shuffle_votes.add(interaction.user)
+            if len(self.player.shuffle_votes) >= (required := self.player.required()):
+                pass
             else:
-                self.player.shuffle_votes.add(interaction.user)
-                if len(self.player.shuffle_votes) >= (
-                    required := self.player.required()
-                ):
-                    pass
-                else:
-                    return await self.send(
-                        interaction,
-                        "shuffleVote",
-                        interaction.user,
-                        len(self.player.shuffle_votes),
-                        required,
-                    )
+                return await self.send(
+                    interaction,
+                    "shuffleVote",
+                    interaction.user,
+                    len(self.player.shuffle_votes),
+                    required,
+                )
 
         await self.player.shuffle("queue", interaction.user)
         await self.send(interaction, "shuffled")
+        return None
 
 
 class Forward(ControlButton):
@@ -395,6 +383,7 @@ class Forward(ControlButton):
 
         await self.player.seek(position)
         await self.send(interaction, "forward", func.time(position))
+        return None
 
 
 class Rewind(ControlButton):
@@ -417,6 +406,7 @@ class Rewind(ControlButton):
 
         await self.player.seek(position)
         await self.send(interaction, "rewind", func.time(position))
+        return None
 
 
 class Lyrics(ControlButton):
@@ -443,15 +433,11 @@ class Lyrics(ControlButton):
 
             view = views.LyricsView(
                 name=title,
-                source={
-                    _: re.findall(r".*\n(?:.*\n){,22}", v or "")
-                    for _, v in lyrics.items()
-                },
+                source={_: re.findall(r".*\n(?:.*\n){,22}", v or "") for _, v in lyrics.items()},
                 author=interaction.user,
             )
-            view.response = await self.send(
-                interaction, view.build_embed(), view=view, ephemeral=True
-            )
+            view.response = await self.send(interaction, view.build_embed(), view=view, ephemeral=True)
+        return None
 
 
 class Tracks(discord.ui.Select):
@@ -465,15 +451,12 @@ class Tracks(discord.ui.Select):
             options.append(
                 discord.SelectOption(
                     label=f"{index}. {track.title[:40]}",
-                    description=f"{track.author[:30]} · "
-                    + ("Live" if track.is_stream else track.formatted_length),
+                    description=f"{track.author[:30]} · " + ("Live" if track.is_stream else track.formatted_length),
                     emoji=track.emoji,
                 )
             )
 
-        super().__init__(
-            placeholder=self.player.get_msg("playerDropdown"), options=options, row=row
-        )
+        super().__init__(placeholder=self.player.get_msg("playerDropdown"), options=options, row=row)
 
     async def callback(self, interaction: discord.Interaction):
         if not self.player.is_privileged(interaction.user):
@@ -484,6 +467,7 @@ class Tracks(discord.ui.Select):
 
         if self.player.settings.get("controller_msg", True):
             await func.send(interaction, "skipped", interaction.user)
+        return None
 
 
 class Effects(discord.ui.Select):
@@ -494,9 +478,7 @@ class Effects(discord.ui.Select):
         for name in voicelink.Filters.get_available_filters():
             options.append(discord.SelectOption(label=name.capitalize(), value=name))
 
-        super().__init__(
-            placeholder=self.player.get_msg("playerFilter"), options=options, row=row
-        )
+        super().__init__(placeholder=self.player.get_msg("playerFilter"), options=options, row=row)
 
     async def callback(self, interaction: discord.Interaction):
         if not self.player.is_privileged(interaction.user):
@@ -509,16 +491,15 @@ class Effects(discord.ui.Select):
 
         selected_filter = avalibable_filters.get(self.values[0].lower())()
         if self.player.filters.has_filter(filter_tag=selected_filter.tag):
-            await self.player.remove_filter(
-                filter_tag=selected_filter.tag, requester=interaction.user
-            )
+            await self.player.remove_filter(filter_tag=selected_filter.tag, requester=interaction.user)
             await func.send(interaction, "clearEffect")
         else:
             await self.player.add_filter(selected_filter, requester=interaction.user)
             await func.send(interaction, "addEffect", selected_filter.tag)
+        return None
 
 
-BUTTON_TYPE: Dict[str, Type[ControlButton]] = {
+BUTTON_TYPE: dict[str, type[ControlButton]] = {
     "back": Back,
     "resume": Resume,
     "skip": Skip,
@@ -537,7 +518,7 @@ BUTTON_TYPE: Dict[str, Type[ControlButton]] = {
     "effects": Effects,
 }
 
-BUTTON_COLORS: Dict[str, discord.ButtonStyle] = {
+BUTTON_COLORS: dict[str, discord.ButtonStyle] = {
     "blue": discord.ButtonStyle.primary,
     "grey": discord.ButtonStyle.secondary,
     "red": discord.ButtonStyle.danger,
@@ -553,9 +534,9 @@ class InteractiveController(discord.ui.View):
         for row, btnRow in enumerate(func.settings.controller.get("default_buttons")):
             for btn in btnRow:
                 color = ""
-                if isinstance(btn, Dict):
-                    color = list(btn.values())[0]
-                    btn = list(btn.keys())[0]
+                if isinstance(btn, dict):
+                    color = next(iter(btn.values()))
+                    btn = next(iter(btn.keys()))
                 btnClass = BUTTON_TYPE.get(btn.lower())
                 style = BUTTON_COLORS.get(color.lower(), BUTTON_COLORS["grey"])
                 if not btnClass or (self.player.queue.is_empty and btn == "tracks"):
@@ -564,7 +545,7 @@ class InteractiveController(discord.ui.View):
 
         self.cooldown = commands.CooldownMapping.from_cooldown(2.0, 10.0, key)
 
-    async def interaction_check(self, interaction: discord.Interaction):
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not self.player.node._available:
             await func.send(interaction, "nodeReconnect", ephemeral=True)
             return False
@@ -577,19 +558,16 @@ class InteractiveController(discord.ui.View):
             if retry_after:
                 raise views.ButtonOnCooldown(retry_after)
             return True
-        else:
-            await func.send(
-                interaction,
-                "notInChannel",
-                interaction.user.mention,
-                self.player.channel.mention,
-                ephemeral=True,
-            )
-            return False
+        await func.send(
+            interaction,
+            "notInChannel",
+            interaction.user.mention,
+            self.player.channel.mention,
+            ephemeral=True,
+        )
+        return False
 
-    async def on_error(
-        self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item
-    ):
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
         if isinstance(error, views.ButtonOnCooldown):
             sec = int(error.retry_after)
             await interaction.response.send_message(
@@ -599,5 +577,3 @@ class InteractiveController(discord.ui.View):
 
         elif isinstance(error, Exception):
             await interaction.response.send_message(error)
-
-        return

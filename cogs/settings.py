@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -22,25 +23,24 @@ SOFTWARE.
 """
 
 import discord
-import voicelink
 import psutil
-import function as func
-
 from discord import app_commands
 from discord.ext import commands
+
+import function as func
+import voicelink
 from function import (
     LANGS,
-    send,
-    update_settings,
-    get_settings,
-    get_lang,
-    time as ctime,
-    get_aliases,
     cooldown_check,
     format_bytes,
+    get_aliases,
+    get_lang,
+    get_settings,
+    send,
+    time as ctime,
+    update_settings,
 )
-
-from views import DebugView, HelpView, EmbedBuilderView
+from views import DebugView, EmbedBuilderView, HelpView
 
 
 def status_icon(status: bool) -> str:
@@ -50,14 +50,10 @@ def status_icon(status: bool) -> str:
 class Settings(commands.Cog, name="settings"):
     def __init__(self, bot) -> None:
         self.bot: commands.Bot = bot
-        self.description = (
-            "This category is only available to admin permissions on the server."
-        )
+        self.description = "This category is only available to admin permissions on the server."
 
-    @commands.hybrid_group(
-        name="settings", aliases=get_aliases("settings"), invoke_without_command=True
-    )
-    async def settings(self, ctx: commands.Context):
+    @commands.hybrid_group(name="settings", aliases=get_aliases("settings"), invoke_without_command=True)
+    async def settings(self, ctx: commands.Context) -> None:
         view = HelpView(self.bot, ctx.author)
         embed = view.build_embed(self.qualified_name)
         view.response = await send(ctx, embed, view=view)
@@ -66,42 +62,38 @@ class Settings(commands.Cog, name="settings"):
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
     async def prefix(self, ctx: commands.Context, prefix: str):
-        "Change the default prefix for message commands."
+        """Change the default prefix for message commands."""
         if not self.bot.intents.message_content:
             return await send(ctx, "missingIntents", "MESSAGE_CONTENT", ephemeral=True)
 
         await update_settings(ctx.guild.id, {"$set": {"prefix": prefix}})
         await send(ctx, "setPrefix", prefix, prefix)
+        return None
 
     @settings.command(name="language", aliases=get_aliases("language"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
     async def language(self, ctx: commands.Context, language: str):
-        "You can choose your preferred language, the bot message will change to the language you set."
+        """You can choose your preferred language, the bot message will change to the language you set."""
         language = language.upper()
         if language not in LANGS:
             return await send(ctx, "languageNotFound")
 
         await update_settings(ctx.guild.id, {"$set": {"lang": language}})
         await send(ctx, "changedLanguage", language)
+        return None
 
     @language.autocomplete("language")
-    async def autocomplete_callback(
-        self, interaction: discord.Interaction, current: str
-    ) -> list:
+    async def autocomplete_callback(self, interaction: discord.Interaction, current: str) -> list:
         if current:
-            return [
-                app_commands.Choice(name=lang, value=lang)
-                for lang in LANGS.keys()
-                if current.upper() in lang
-            ]
-        return [app_commands.Choice(name=lang, value=lang) for lang in LANGS.keys()]
+            return [app_commands.Choice(name=lang, value=lang) for lang in LANGS if current.upper() in lang]
+        return [app_commands.Choice(name=lang, value=lang) for lang in LANGS]
 
     @settings.command(name="dj", aliases=get_aliases("dj"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def dj(self, ctx: commands.Context, role: discord.Role = None):
-        "Set a DJ role or remove DJ role."
+    async def dj(self, ctx: commands.Context, role: discord.Role = None) -> None:
+        """Set a DJ role or remove DJ role."""
         await update_settings(
             ctx.guild.id,
             {"$set": {"dj": role.id}} if role else {"$unset": {"dj": None}},
@@ -117,8 +109,8 @@ class Settings(commands.Cog, name="settings"):
     )
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def queue(self, ctx: commands.Context, mode: str):
-        "Change to another type of queue mode."
+    async def queue(self, ctx: commands.Context, mode: str) -> None:
+        """Change to another type of queue mode."""
         mode = "FairQueue" if mode.lower() == "fairqueue" else "Queue"
         await update_settings(ctx.guild.id, {"$set": {"queueType": mode}})
         await send(ctx, "setqueue", mode)
@@ -126,8 +118,8 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="247", aliases=get_aliases("247"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def playforever(self, ctx: commands.Context):
-        "Toggles 24/7 mode, which disables automatic inactivity-based disconnects."
+    async def playforever(self, ctx: commands.Context) -> None:
+        """Toggles 24/7 mode, which disables automatic inactivity-based disconnects."""
         settings = await get_settings(ctx.guild.id)
         toggle = settings.get("24/7", False)
         await update_settings(ctx.guild.id, {"$set": {"24/7": not toggle}})
@@ -140,8 +132,8 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="bypassvote", aliases=get_aliases("bypassvote"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def bypassvote(self, ctx: commands.Context):
-        "Toggles voting system."
+    async def bypassvote(self, ctx: commands.Context) -> None:
+        """Toggles voting system."""
         settings = await get_settings(ctx.guild.id)
         toggle = settings.get("votedisable", True)
         await update_settings(ctx.guild.id, {"$set": {"votedisable": not toggle}})
@@ -154,8 +146,8 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="view", aliases=get_aliases("view"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def view(self, ctx: commands.Context):
-        "Show all the bot settings in your server."
+    async def view(self, ctx: commands.Context) -> None:
+        """Show all the bot settings in your server."""
         settings = await get_settings(ctx.guild.id)
 
         texts = await get_lang(
@@ -202,9 +194,7 @@ class Settings(commands.Cog, name="settings"):
         )
 
         if stage_template := settings.get("stage_announce_template"):
-            embed.add_field(
-                name=texts[5], value=f"```{stage_template}```", inline=False
-            )
+            embed.add_field(name=texts[5], value=f"```{stage_template}```", inline=False)
 
         perms = ctx.guild.me.guild_permissions
         embed.add_field(
@@ -223,8 +213,8 @@ class Settings(commands.Cog, name="settings"):
     @app_commands.describe(value="Input a integer.")
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def volume(self, ctx: commands.Context, value: commands.Range[int, 1, 150]):
-        "Set the player's volume."
+    async def volume(self, ctx: commands.Context, value: commands.Range[int, 1, 150]) -> None:
+        """Set the player's volume."""
         player: voicelink.Player = ctx.guild.voice_client
         if player:
             await player.set_volume(value, ctx.author)
@@ -235,8 +225,8 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="togglecontroller", aliases=get_aliases("togglecontroller"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def togglecontroller(self, ctx: commands.Context):
-        "Toggles the music controller."
+    async def togglecontroller(self, ctx: commands.Context) -> None:
+        """Toggles the music controller."""
         settings = await get_settings(ctx.guild.id)
         toggle = not settings.get("controller", True)
 
@@ -258,7 +248,7 @@ class Settings(commands.Cog, name="settings"):
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
     async def duplicatetrack(self, ctx: commands.Context):
-        "Toggle Vocard to prevent duplicate songs from queuing."
+        """Toggle Vocard to prevent duplicate songs from queuing."""
         settings = await get_settings(ctx.guild.id)
         toggle = not settings.get("duplicateTrack", False)
         player: voicelink.Player = ctx.guild.voice_client
@@ -275,12 +265,10 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="customcontroller", aliases=get_aliases("customcontroller"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def customcontroller(self, ctx: commands.Context):
-        "Customizes music controller embeds."
+    async def customcontroller(self, ctx: commands.Context) -> None:
+        """Customizes music controller embeds."""
         settings = await get_settings(ctx.guild.id)
-        controller_settings = settings.get(
-            "default_controller", func.settings.controller
-        )
+        controller_settings = settings.get("default_controller", func.settings.controller)
 
         view = EmbedBuilderView(ctx, controller_settings.get("embeds").copy())
         view.response = await send(ctx, view.build_embed(), view=view)
@@ -288,8 +276,8 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="controllermsg", aliases=get_aliases("controllermsg"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def controllermsg(self, ctx: commands.Context):
-        "Toggles to send a message when clicking the button in the music controller."
+    async def controllermsg(self, ctx: commands.Context) -> None:
+        """Toggles to send a message when clicking the button in the music controller."""
         settings = await get_settings(ctx.guild.id)
         toggle = not settings.get("controller_msg", True)
 
@@ -303,36 +291,24 @@ class Settings(commands.Cog, name="settings"):
     @settings.command(name="stageannounce", aliases=get_aliases("stageannounce"))
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def stageannounce(self, ctx: commands.Context, template: str = None):
-        "Customize the channel topic template"
-        await update_settings(
-            ctx.guild.id, {"$set": {"stage_announce_template": template}}
-        )
+    async def stageannounce(self, ctx: commands.Context, template: str | None = None) -> None:
+        """Customize the channel topic template."""
+        await update_settings(ctx.guild.id, {"$set": {"stage_announce_template": template}})
         await send(ctx, "setStageAnnounceTemplate")
 
     @settings.command(name="setupchannel", aliases=get_aliases("setupchannel"))
-    @app_commands.describe(
-        channel="Provide a request channel. If not, a text channel will be generated."
-    )
+    @app_commands.describe(channel="Provide a request channel. If not, a text channel will be generated.")
     @commands.has_permissions(manage_guild=True)
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def setupchannel(
-        self, ctx: commands.Context, channel: discord.TextChannel = None
-    ) -> None:
-        "Sets up a dedicated channel for song requests in your server."
+    async def setupchannel(self, ctx: commands.Context, channel: discord.TextChannel = None) -> None:
+        """Sets up a dedicated channel for song requests in your server."""
         if not self.bot.intents.message_content:
             return await send(ctx, "missingIntents", "MESSAGE_CONTENT", ephemeral=True)
 
         if not channel:
             try:
-                overwrites = {
-                    ctx.guild.me: discord.PermissionOverwrite(
-                        read_messages=True, manage_messages=True
-                    )
-                }
-                channel = await ctx.guild.create_text_channel(
-                    "vocard-song-requests", overwrites=overwrites
-                )
+                overwrites = {ctx.guild.me: discord.PermissionOverwrite(read_messages=True, manage_messages=True)}
+                channel = await ctx.guild.create_text_channel("vocard-song-requests", overwrites=overwrites)
             except:
                 return await send(ctx, "noCreatePermission")
 
@@ -341,14 +317,8 @@ class Settings(commands.Cog, name="settings"):
             return await send(ctx, "noCreatePermission")
 
         settings = await func.get_settings(ctx.guild.id)
-        controller = (
-            settings.get("default_controller", func.settings.controller)
-            .get("embeds", {})
-            .get("inactive", {})
-        )
-        message = await channel.send(
-            embed=voicelink.build_embed(controller, voicelink.Placeholders(self.bot))
-        )
+        controller = settings.get("default_controller", func.settings.controller).get("embeds", {}).get("inactive", {})
+        message = await channel.send(embed=voicelink.build_embed(controller, voicelink.Placeholders(self.bot)))
 
         await update_settings(
             ctx.guild.id,
@@ -362,13 +332,12 @@ class Settings(commands.Cog, name="settings"):
             },
         )
         await send(ctx, "createSongRequestChannel", channel.mention)
+        return None
 
     @app_commands.command(name="debug")
     async def debug(self, interaction: discord.Interaction):
         if interaction.user.id not in func.settings.bot_access_user:
-            return await interaction.response.send_message(
-                "You are not able to use this command!"
-            )
+            return await interaction.response.send_message("You are not able to use this command!")
 
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage(func.ROOT_DIR)
@@ -413,9 +382,8 @@ class Settings(commands.Cog, name="settings"):
                     f"• PLAYERS: {len(node._players)}\nNo extra data is available for display```",
                 )
 
-        await interaction.response.send_message(
-            embed=embed, view=DebugView(self.bot), ephemeral=True
-        )
+        await interaction.response.send_message(embed=embed, view=DebugView(self.bot), ephemeral=True)
+        return None
 
 
 async def setup(bot: commands.Bot) -> None:

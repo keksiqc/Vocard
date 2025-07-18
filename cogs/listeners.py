@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,13 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import os
 import asyncio
-import discord
-import voicelink
-import function as func
+import os
 
+import discord
 from discord.ext import commands
+
+import function as func
+import voicelink
 
 
 class Listeners(commands.Cog):
@@ -46,9 +48,7 @@ class Listeners(commands.Cog):
             try:
                 await self.voicelink.create_node(bot=self.bot, logger=func.logger, **n)
             except Exception as e:
-                func.logger.error(
-                    f"Node {n['identifier']} is not able to connect! - Reason: {e}"
-                )
+                func.logger.error(f"Node {n['identifier']} is not able to connect! - Reason: {e}")
 
     async def restore_last_session_players(self) -> None:
         """Re-establish connections for players from the last session."""
@@ -64,12 +64,7 @@ class Listeners(commands.Cog):
                     continue
 
                 channel = self.bot.get_channel(channel_id)
-                if not channel:
-                    continue
-                elif not any(
-                    False if member.bot or member.voice.self_deaf else True
-                    for member in channel.members
-                ):
+                if not channel or not any(not (member.bot or member.voice.self_deaf) for member in channel.members):
                     continue
 
                 dj_member = channel.guild.get_member(data.get("dj"))
@@ -81,9 +76,7 @@ class Listeners(commands.Cog):
 
                 # Connect to the channel and initialize the player.
                 player: voicelink.Player = await channel.connect(
-                    cls=voicelink.Player(
-                        self.bot, channel, func.TempCtx(dj_member, channel), settings
-                    )
+                    cls=voicelink.Player(self.bot, channel, func.TempCtx(dj_member, channel), settings)
                 )
 
                 # Restore the queue.
@@ -95,9 +88,7 @@ class Listeners(commands.Cog):
 
                     decoded_track = voicelink.decode(track_id)
                     requester = channel.guild.get_member(track_data.get("requester_id"))
-                    track = voicelink.Track(
-                        track_id=track_id, info=decoded_track, requester=requester
-                    )
+                    track = voicelink.Track(track_id=track_id, info=decoded_track, requester=requester)
                     player.queue._queue.append(track)
 
                 # Restore queue settings.
@@ -139,23 +130,19 @@ class Listeners(commands.Cog):
                 os.remove(file_path)
 
         except Exception as del_error:
-            func.logger.error(
-                "Failed to remove session file: %s", file_path, exc_info=del_error
-            )
+            func.logger.error("Failed to remove session file: %s", file_path, exc_info=del_error)
 
     @commands.Cog.listener()
-    async def on_voicelink_track_end(self, player: voicelink.Player, track, _):
+    async def on_voicelink_track_end(self, player: voicelink.Player, track, _) -> None:
         await player.do_next()
 
     @commands.Cog.listener()
-    async def on_voicelink_track_stuck(self, player: voicelink.Player, track, _):
+    async def on_voicelink_track_stuck(self, player: voicelink.Player, track, _) -> None:
         await asyncio.sleep(10)
         await player.do_next()
 
     @commands.Cog.listener()
-    async def on_voicelink_track_exception(
-        self, player: voicelink.Player, track, error: dict
-    ):
+    async def on_voicelink_track_exception(self, player: voicelink.Player, track, error: dict) -> None:
         try:
             player._track_is_stuck = True
             await player.context.send(
@@ -171,7 +158,7 @@ class Listeners(commands.Cog):
         member: discord.Member,
         before: discord.VoiceState,
         after: discord.VoiceState,
-    ):
+    ) -> None:
         if member.bot:
             return
 
@@ -188,19 +175,17 @@ class Listeners(commands.Cog):
             if after.channel.id != player.channel.id:
                 return
 
-        elif before.channel and not after.channel:
+        elif (before.channel and not after.channel) or (
+            before.channel and after.channel and after.channel.id != player.channel.id
+        ):
             is_joined = False
 
-        elif before.channel and after.channel:
-            if after.channel.id != player.channel.id:
-                is_joined = False
-
-        if is_joined and player.settings.get("24/7", False):
-            if (
-                player.is_paused
-                and len([m for m in player.channel.members if not m.bot]) == 1
-            ):
-                await player.set_pause(False, member)
+        if (
+            is_joined
+            and player.settings.get("24/7", False)
+            and (player.is_paused and len([m for m in player.channel.members if not m.bot]) == 1)
+        ):
+            await player.set_pause(False, member)
 
         if self.bot.ipc._is_connected:
             await self.bot.ipc.send(

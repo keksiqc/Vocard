@@ -1,5 +1,5 @@
 """
-MIT License
+MIT License.
 
 Copyright (c) 2017-present Devoxin
 
@@ -23,10 +23,11 @@ SOFTWARE.
 """
 
 import struct
-
-from io import BytesIO
 from base64 import b64decode, b64encode
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Final
+from collections.abc import Callable, Mapping
+from io import BytesIO
+from typing import Any, Final
+
 
 V2_KEYSET = {
     "title",
@@ -56,7 +57,7 @@ class DataReader:
 
     def __init__(self, base64_str: str):
         self._buf: Final[BytesIO] = BytesIO(b64decode(base64_str))
-        self._mark: Optional[int] = None
+        self._mark: int | None = None
 
     @property
     def remaining(self) -> int:
@@ -67,10 +68,10 @@ class DataReader:
 
     def rewind(self) -> None:
         if self._mark is None or not isinstance(self._mark, int):
-            raise IOError("Cannot rewind buffer without a marker!")
+            raise OSError("Cannot rewind buffer without a marker!")
 
         if self._mark < 0:
-            raise IOError("Cannot rewind buffer to a negative position!")
+            raise OSError("Cannot rewind buffer to a negative position!")
 
         self._buf.seek(self._mark)
         self._mark = None
@@ -97,7 +98,7 @@ class DataReader:
         (result,) = struct.unpack(">Q", self._read(8))
         return result
 
-    def read_nullable_utf(self, utfm: bool = False) -> Optional[str]:
+    def read_nullable_utf(self, utfm: bool = False) -> str | None:
         exists = self.read_boolean()
 
         if not exists:
@@ -121,35 +122,35 @@ class DataWriter:
     def __init__(self):
         self._buf: Final[BytesIO] = BytesIO()
 
-    def _write(self, data):
+    def _write(self, data) -> None:
         self._buf.write(data)
 
-    def write_byte(self, byte):
+    def write_byte(self, byte) -> None:
         self._buf.write(byte)
 
-    def write_boolean(self, boolean: bool):
+    def write_boolean(self, boolean: bool) -> None:
         enc = struct.pack("B", 1 if boolean else 0)
         self.write_byte(enc)
 
-    def write_unsigned_short(self, short: int):
+    def write_unsigned_short(self, short: int) -> None:
         enc = struct.pack(">H", short)
         self._write(enc)
 
-    def write_int(self, integer: int):
+    def write_int(self, integer: int) -> None:
         enc = struct.pack(">i", integer)
         self._write(enc)
 
-    def write_long(self, long_value: int):
+    def write_long(self, long_value: int) -> None:
         enc = struct.pack(">Q", long_value)
         self._write(enc)
 
-    def write_nullable_utf(self, utf_string: Optional[str]):
+    def write_nullable_utf(self, utf_string: str | None) -> None:
         self.write_boolean(bool(utf_string))
 
         if utf_string:
             self.write_utf(utf_string)
 
-    def write_utf(self, utf_string: str):
+    def write_utf(self, utf_string: str) -> None:
         utf = utf_string.encode("utf8")
         byte_len = len(utf)
 
@@ -200,7 +201,7 @@ def decode_lavasrc_fields(reader: DataReader) -> Mapping[str, Any]:
     }
 
 
-DEFAULT_DECODER_MAPPING: Dict[str, Callable[[DataReader], Mapping[str, Any]]] = {
+DEFAULT_DECODER_MAPPING: dict[str, Callable[[DataReader], Mapping[str, Any]]] = {
     "http": decode_probe_info,
     "local": decode_probe_info,
     "deezer": decode_lavasrc_fields,
@@ -231,23 +232,17 @@ def read_utfm(utf_len: int, utf_bytes: bytes) -> str:
         elif 12 <= shift <= 13:
             count += 2
             if count > utf_len:
-                raise UnicodeDecodeError(
-                    "utf8", b"", 0, utf_len, "malformed input: partial character at end"
-                )
+                raise UnicodeDecodeError("utf8", b"", 0, utf_len, "malformed input: partial character at end")
             char2 = utf_bytes[count - 1]
             if (char2 & 0xC0) != 0x80:
-                raise UnicodeDecodeError(
-                    "utf8", b"", 0, utf_len, f"malformed input around byte {count}"
-                )
+                raise UnicodeDecodeError("utf8", b"", 0, utf_len, f"malformed input around byte {count}")
 
             char_shift = ((char & 0x1F) << 6) | (char2 & 0x3F)
             chars.append(chr(char_shift))
         elif shift == 14:
             count += 3
             if count > utf_len:
-                raise UnicodeDecodeError(
-                    "utf8", b"", 0, utf_len, "malformed input: partial character at end"
-                )
+                raise UnicodeDecodeError("utf8", b"", 0, utf_len, "malformed input: partial character at end")
 
             char2 = utf_bytes[count - 2]
             char3 = utf_bytes[count - 1]
@@ -261,21 +256,17 @@ def read_utfm(utf_len: int, utf_bytes: bytes) -> str:
                     f"malformed input around byte {(count - 1)}",
                 )
 
-            char_shift = (
-                ((char & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0)
-            )
+            char_shift = ((char & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0)
             chars.append(chr(char_shift))
         else:
-            raise UnicodeDecodeError(
-                "utf8", b"", 0, utf_len, f"malformed input around byte {count}"
-            )
+            raise UnicodeDecodeError("utf8", b"", 0, utf_len, f"malformed input around byte {count}")
 
     return "".join(chars).encode("utf-16", "surrogatepass").decode("utf-16")
 
 
 def _read_track_common(
     reader: DataReader,
-) -> Tuple[str, str, int, str, bool, Optional[str]]:
+) -> tuple[str, str, int, str, bool, str | None]:
     title = reader.read_utfm()
     author = reader.read_utfm()
     length = reader.read_long()
@@ -285,7 +276,7 @@ def _read_track_common(
     return (title, author, length, identifier, is_stream, uri)
 
 
-def _write_track_common(track: Dict[str, Any], writer: DataWriter):
+def _write_track_common(track: dict[str, Any], writer: DataWriter) -> None:
     writer.write_utf(track["title"])
     writer.write_utf(track["author"])
     writer.write_long(track["length"])
@@ -338,12 +329,10 @@ def decode(
 
 
 def encode(
-    track: Dict[str, Any],
-    source_encoders: Mapping[
-        str, Callable[[DataWriter, Dict[str, Any]], None]
-    ] = MISSING,
+    track: dict[str, Any],
+    source_encoders: Mapping[str, Callable[[DataWriter, dict[str, Any]], None]] = MISSING,
 ) -> str:
-    assert V3_KEYSET <= track.keys()
+    assert track.keys() >= V3_KEYSET
 
     writer = DataWriter()
     version = struct.pack("B", 3)

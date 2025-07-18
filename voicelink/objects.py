@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -22,68 +23,65 @@ SOFTWARE.
 """
 
 import re
-from typing import Optional
 
 from discord import Member
 from tldextract import extract
 
-from .enums import SearchType
 from function import get_source, time as ctime
 
+from .enums import SearchType
 from .transformer import encode
+
 
 YOUTUBE_REGEX = re.compile(r"(https?://)?(www\.)?youtube\.(com|nl)/watch\?v=([-\w]+)")
 
 
 class Track:
-    """The base track object. Returns critical track information needed for parsing by Lavalink.
+    """
+    The base track object. Returns critical track information needed for parsing by Lavalink.
     You can also pass in commands.Context to get a discord.py Context object in your track.
     """
 
     __slots__ = (
-        "_track_id",
-        "info",
-        "identifier",
-        "title",
-        "author",
-        "uri",
-        "source",
         "_search_type",
-        "thumbnail",
+        "_track_id",
+        "author",
         "emoji",
-        "length",
-        "requester",
-        "is_stream",
-        "is_seekable",
-        "position",
         "end_time",
+        "identifier",
+        "info",
+        "is_seekable",
+        "is_stream",
+        "length",
+        "position",
+        "requester",
+        "source",
+        "thumbnail",
+        "title",
+        "uri",
     )
 
     def __init__(
         self,
         *,
-        track_id: str = None,
+        track_id: str | None = None,
         info: dict,
         requester: Member,
         search_type: SearchType = SearchType.YOUTUBE,
     ):
-        self._track_id: Optional[str] = track_id
+        self._track_id: str | None = track_id
         self.info: dict = info
 
         self.identifier: str = info.get("identifier")
         self.title: str = info.get("title", "Unknown")
         self.author: str = info.get("author", "Unknown")
-        self.uri: str = info.get(
-            "uri", "https://discord.com/application-directory/605618911471468554"
-        )
+        self.uri: str = info.get("uri", "https://discord.com/application-directory/605618911471468554")
         self.source: str = info.get("sourceName", extract(self.uri).domain)
         self._search_type: SearchType = search_type
 
         self.thumbnail: str = info.get("artworkUrl")
         if not self.thumbnail and YOUTUBE_REGEX.match(self.uri):
-            self.thumbnail = (
-                f"https://img.youtube.com/vi/{self.identifier}/maxresdefault.jpg"
-            )
+            self.thumbnail = f"https://img.youtube.com/vi/{self.identifier}/maxresdefault.jpg"
 
         self.emoji: str = get_source(self.source, "emoji")
         self.length: float = info.get("length")
@@ -93,7 +91,7 @@ class Track:
         self.is_seekable: bool = info.get("isSeekable", True)
         self.position: int = info.get("position", 0)
 
-        self.end_time: Optional[int] = None
+        self.end_time: int | None = None
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Track):
@@ -124,12 +122,13 @@ class Track:
 
 
 class Playlist:
-    """The base playlist object.
+    """
+    The base playlist object.
     Returns critical playlist information needed for parsing by Lavalink.
     You can also pass in commands.Context to get a discord.py Context object in your tracks.
     """
 
-    __slots__ = ("playlist_info", "name", "thumbnail", "uri", "tracks")
+    __slots__ = ("name", "playlist_info", "thumbnail", "tracks", "uri")
 
     def __init__(
         self,
@@ -143,10 +142,7 @@ class Playlist:
         self.thumbnail: str = None
         self.uri: str = None
 
-        self.tracks = [
-            Track(track_id=track["encoded"], info=track["info"], requester=requester)
-            for track in tracks
-        ]
+        self.tracks = [Track(track_id=track["encoded"], info=track["info"], requester=requester) for track in tracks]
 
     def __str__(self) -> str:
         return self.name

@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,27 +22,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import discord
-import sys
-import os
-import aiohttp
-import update
 import logging
-import voicelink
-import function as func
-
-from discord.ext import commands
-from ipc import IPCClient
-from motor.motor_asyncio import AsyncIOMotorClient
+import os
+import sys
 from logging.handlers import TimedRotatingFileHandler
+
+import aiohttp
+import discord
+from discord.ext import commands
+from motor.motor_asyncio import AsyncIOMotorClient
+
+import function as func
+import update
+import voicelink
 from addons import Settings
+from ipc import IPCClient
 
 
 class Translator(discord.app_commands.Translator):
-    async def load(self):
+    async def load(self) -> None:
         func.logger.info("Loaded Translator")
 
-    async def unload(self):
+    async def unload(self) -> None:
         func.logger.info("Unload Translator")
 
     async def translate(
@@ -56,9 +58,7 @@ class Translator(discord.app_commands.Translator):
             translated_text = func.LOCAL_LANGS[locale_key].get(string.message)
 
             if translated_text is None:
-                missing_translations = func.MISSING_TRANSLATOR.setdefault(
-                    locale_key, []
-                )
+                missing_translations = func.MISSING_TRANSLATOR.setdefault(locale_key, [])
                 if string.message not in missing_translations:
                     missing_translations.append(string.message)
 
@@ -106,15 +106,11 @@ class Vocard(commands.Bot):
                     return await message.delete()
 
         await self.process_commands(message)
+        return None
 
     async def connect_db(self) -> None:
-        if not (
-            (db_name := func.settings.mongodb_name)
-            and (db_url := func.settings.mongodb_url)
-        ):
-            raise Exception(
-                "MONGODB_NAME and MONGODB_URL can't not be empty in settings.json"
-            )
+        if not ((db_name := func.settings.mongodb_name) and (db_url := func.settings.mongodb_url)):
+            raise Exception("MONGODB_NAME and MONGODB_URL can't not be empty in settings.json")
 
         try:
             func.MONGO_DB = AsyncIOMotorClient(host=db_url)
@@ -123,7 +119,7 @@ class Vocard(commands.Bot):
 
         except Exception as e:
             func.logger.error("Not able to connect MongoDB! Reason:", exc_info=e)
-            exit()
+            sys.exit()
 
         func.SETTINGS_DB = func.MONGO_DB[db_name]["Settings"]
         func.USERS_DB = func.MONGO_DB[db_name]["Users"]
@@ -160,11 +156,9 @@ class Vocard(commands.Bot):
             await self.tree.sync()
             func.update_json("settings.json", new_data={"version": update.__version__})
             for locale_key, values in func.MISSING_TRANSLATOR.items():
-                func.logger.warning(
-                    f'Missing translation for "{", ".join(values)}" in "{locale_key}"'
-                )
+                func.logger.warning(f'Missing translation for "{", ".join(values)}" in "{locale_key}"')
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         func.logger.info("------------------")
         func.logger.info(f"Logging As {self.user}")
         func.logger.info(f"Bot ID: {self.user.id}")
@@ -184,52 +178,36 @@ class Vocard(commands.Bot):
 
         if isinstance(
             error,
-            (
-                commands.CommandNotFound,
-                aiohttp.client_exceptions.ClientOSError,
-                discord.errors.NotFound,
-            ),
+            commands.CommandNotFound | aiohttp.client_exceptions.ClientOSError | discord.errors.NotFound,
         ):
-            return
+            return None
 
-        elif isinstance(
+        if isinstance(
             error,
-            (
-                commands.CommandOnCooldown,
-                commands.MissingPermissions,
-                commands.RangeError,
-                commands.BadArgument,
-            ),
+            commands.CommandOnCooldown | commands.MissingPermissions | commands.RangeError | commands.BadArgument,
         ):
             pass
 
         elif isinstance(
             error,
-            (commands.MissingRequiredArgument, commands.MissingRequiredAttachment),
+            commands.MissingRequiredArgument | commands.MissingRequiredAttachment,
         ):
             command = (
                 f"{ctx.prefix}"
-                + (
-                    f"{ctx.command.parent.qualified_name} "
-                    if ctx.command.parent
-                    else ""
-                )
+                + (f"{ctx.command.parent.qualified_name} " if ctx.command.parent else "")
                 + f"{ctx.command.name} {ctx.command.signature}"
             )
             position = command.find(f"<{ctx.current_parameter.name}>") + 1
             description = (
-                f"**Correct Usage:**\n```{command}\n"
-                + " " * position
-                + "^" * len(ctx.current_parameter.name)
-                + "```\n"
+                f"**Correct Usage:**\n```{command}\n" + " " * position + "^" * len(ctx.current_parameter.name) + "```\n"
             )
             if ctx.command.aliases:
-                description += f"**Aliases:**\n`{', '.join([f'{ctx.prefix}{alias}' for alias in ctx.command.aliases])}`\n\n"
+                description += (
+                    f"**Aliases:**\n`{', '.join([f'{ctx.prefix}{alias}' for alias in ctx.command.aliases])}`\n\n"
+                )
             description += f"**Description:**\n{ctx.command.help}\n\u200b"
 
-            embed = discord.Embed(
-                description=description, color=func.settings.embed_color
-            )
+            embed = discord.Embed(description=description, color=func.settings.embed_color)
             embed.set_footer(
                 icon_url=ctx.me.display_avatar.url,
                 text=f"More Help: {func.settings.invite_link}",
@@ -237,10 +215,7 @@ class Vocard(commands.Bot):
             return await ctx.reply(embed=embed)
 
         elif not issubclass(error.__class__, voicelink.VoicelinkException):
-            error = (
-                await func.get_lang(ctx.guild.id, "unknownException")
-                + func.settings.invite_link
-            )
+            error = await func.get_lang(ctx.guild.id, "unknownException") + func.settings.invite_link
             func.logger.error(
                 f"An unexpected error occurred in the {ctx.command.name} command on the {ctx.guild.name}({ctx.guild.id}).",
                 exc_info=exception,
@@ -255,9 +230,7 @@ class Vocard(commands.Bot):
 class CommandCheck(discord.app_commands.CommandTree):
     async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
         if not interaction.guild:
-            await interaction.response.send_message(
-                "This command can only be used in guilds!"
-            )
+            await interaction.response.send_message("This command can only be used in guilds!")
             return False
 
         return True
@@ -271,10 +244,7 @@ async def get_prefix(bot: commands.Bot, message: discord.Message) -> str:
     if (
         prefix
         and not message.content.startswith(prefix)
-        and (
-            await bot.is_owner(message.author)
-            or message.author.id in func.settings.bot_access_user
-        )
+        and (await bot.is_owner(message.author) or message.author.id in func.settings.bot_access_user)
     ):
         return ""
 
@@ -312,7 +282,7 @@ for log_name, log_level in LOG_SETTINGS.get("level", {}).items():
 
 # Setup the bot object
 intents = discord.Intents.default()
-intents.message_content = False if func.settings.bot_prefix is None else True
+intents.message_content = func.settings.bot_prefix is not None
 intents.members = func.settings.ipc_client.get("enable", False)
 intents.voice_states = True
 

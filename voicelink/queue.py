@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,13 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from .exceptions import QueueFull, OutofList
-from .objects import Track
-from .enums import LoopType
-
-from typing import Optional, Tuple, Callable, Dict, List
+from collections.abc import Callable
 from itertools import cycle
+
 from discord import Member
+
+from .enums import LoopType
+from .exceptions import OutofList, QueueFull
+from .objects import Track
 
 
 class LoopTypeCycle:
@@ -54,10 +56,8 @@ class LoopTypeCycle:
 
 
 class Queue:
-    def __init__(
-        self, size: int, allow_duplicate: bool, get_msg: Callable[[str], str]
-    ) -> None:
-        self._queue: List[Track] = []
+    def __init__(self, size: int, allow_duplicate: bool, get_msg: Callable[[str], str]) -> None:
+        self._queue: list[Track] = []
         self._position: int = 0
         self._size: int = size
         self._repeat: LoopTypeCycle = LoopTypeCycle()
@@ -66,14 +66,10 @@ class Queue:
 
         self.get_msg = get_msg
 
-    def get(self) -> Optional[Track]:
+    def get(self) -> Track | None:
         track = None
         try:
-            track = self._queue[
-                self._position - 1
-                if self._repeat.mode == LoopType.TRACK
-                else self._position
-            ]
+            track = self._queue[self._position - 1 if self._repeat.mode == LoopType.TRACK else self._position]
             if self._repeat.mode != LoopType.TRACK:
                 self._position += 1
         except:
@@ -109,14 +105,12 @@ class Queue:
     def skipto(self, index: int) -> None:
         if not 0 < index <= self.count:
             raise OutofList(self.get_msg("voicelinkOutofList"))
-        else:
-            self._position += index - 1
+        self._position += index - 1
 
     def backto(self, index: int) -> None:
         if not self._position - index >= 0:
             raise OutofList(self.get_msg("voicelinkOutofList"))
-        else:
-            self._position -= index
+        self._position -= index
 
     def history_clear(self, is_playing: bool) -> None:
         self._queue[: self._position - 1 if is_playing else self._position] = []
@@ -132,7 +126,7 @@ class Queue:
         elif queue_type == "history":
             self._queue[: self._position] = replacement
 
-    def swap(self, track_index1: int, track_index2: int) -> Tuple[Track, Track]:
+    def swap(self, track_index1: int, track_index2: int) -> tuple[Track, Track]:
         try:
             adjusted_position = self._position - 1
             (
@@ -142,14 +136,12 @@ class Queue:
                 self._queue[adjusted_position + track_index2],
                 self._queue[adjusted_position + track_index1],
             )
-            return self._queue[adjusted_position + track_index1], self._queue[
-                adjusted_position + track_index2
-            ]
+            return self._queue[adjusted_position + track_index1], self._queue[adjusted_position + track_index2]
         except IndexError:
             raise OutofList(self.get_msg("voicelinkOutofList"))
 
-    def move(self, target: int, to: int) -> Optional[Track]:
-        if not 0 < target <= self.count or not 0 < to:
+    def move(self, target: int, to: int) -> Track | None:
+        if not 0 < target <= self.count or not to > 0:
             raise OutofList(self.get_msg("voicelinkOutofList"))
 
         try:
@@ -160,9 +152,7 @@ class Queue:
         except:
             raise OutofList(self.get_msg("voicelinkOutofList"))
 
-    def remove(
-        self, index: int, index2: int = None, member: Member = None
-    ) -> Dict[int, Track]:
+    def remove(self, index: int, index2: int | None = None, member: Member = None) -> dict[int, Track]:
         pos = self._position - 1
 
         if index2 is None:
@@ -172,7 +162,7 @@ class Queue:
             index, index2 = index2, index
 
         try:
-            removed_tracks: Dict[str, Track] = {}
+            removed_tracks: dict[str, Track] = {}
             for i, track in enumerate(self._queue[pos + index : pos + index2 + 1]):
                 if member and track.requester != member:
                     continue
@@ -184,12 +174,12 @@ class Queue:
         except:
             raise OutofList(self.get_msg("voicelinkOutofList"))
 
-    def history(self, incTrack: bool = False) -> List[Track]:
+    def history(self, incTrack: bool = False) -> list[Track]:
         if incTrack:
             return self._queue[: self._position]
         return self._queue[: self._position - 1]
 
-    def tracks(self, incTrack: bool = False) -> List[Track]:
+    def tracks(self, incTrack: bool = False) -> list[Track]:
         if incTrack:
             return self._queue[self._position - 1 :]
         return self._queue[self._position :]

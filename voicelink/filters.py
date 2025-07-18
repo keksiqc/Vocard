@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -22,9 +23,8 @@ SOFTWARE.
 """
 
 import collections
-from .exceptions import FilterInvalidArgument, FilterTagAlreadyInUse, FilterTagInvalid
 
-from typing import Dict, List
+from .exceptions import FilterInvalidArgument, FilterTagAlreadyInUse, FilterTagInvalid
 
 
 class Filter:
@@ -36,11 +36,11 @@ class Filter:
     """
 
     def __init__(self):
-        self.payload: Dict[str, float] = None
-        self.scope: Dict[str, List[int]] = None
+        self.payload: dict[str, float] = None
+        self.scope: dict[str, list[int]] = None
         self.tag: str = None
 
-    def _init_with_scope(self, scope: Dict[str, List[int]], **kwargs):
+    def _init_with_scope(self, scope: dict[str, list[int]], **kwargs) -> None:
         self.scope = scope
         for prop, (min_val, max_val) in scope.items():
             setattr(self, prop, kwargs.get(prop, scope[prop][0]))
@@ -49,16 +49,12 @@ class Filter:
                     f"{self.__class__.__name__} {prop} must be between {min_val} and {max_val}."
                 )
         self.tag = kwargs.get("tag")
-        self.payload = {
-            self.__class__.__name__.lower(): {
-                prop: getattr(self, prop) for prop in scope
-            }
-        }
+        self.payload = {self.__class__.__name__.lower(): {prop: getattr(self, prop) for prop in scope}}
 
 
 class Filters:
     def __init__(self) -> None:
-        self._filters: List[Filter] = []
+        self._filters: list[Filter] = []
 
     def add_filter(self, *, filter: Filter) -> None:
         if self.has_filter(filter_tag=filter.tag):
@@ -85,11 +81,11 @@ class Filters:
             payload.update(filter.payload)
         return payload
 
-    def get_filters(self) -> List[Filter]:
+    def get_filters(self) -> list[Filter]:
         return self._filters
 
     @classmethod
-    def get_available_filters(cls) -> Dict[str, Filter]:
+    def get_available_filters(cls) -> dict[str, Filter]:
         return {
             "karaoke": Karaoke,
             "tremolo": Tremolo,
@@ -108,7 +104,7 @@ class Equalizer(Filter):
     Filter which represents a 15 band equalizer.
     You can adjust the dynamic of the sound using this filter.
     i.e: Applying a bass boost filter to emphasize the bass in a song.
-    The format for the levels is: List[Tuple[int, float]]
+    The format for the levels is: List[Tuple[int, float]].
     """
 
     def __init__(self, *, tag: str = "equalizer", levels: list):
@@ -133,10 +129,10 @@ class Equalizer(Filter):
 
     @classmethod
     def flat(cls):
-        """Equalizer preset which represents a flat EQ board,
+        """
+        Equalizer preset which represents a flat EQ board,
         with all levels set to their default values.
         """
-
         levels = [
             (0, 0.0),
             (1, 0.0),
@@ -158,11 +154,11 @@ class Equalizer(Filter):
 
     @classmethod
     def boost(cls):
-        """Equalizer preset which boosts the sound of a track,
+        """
+        Equalizer preset which boosts the sound of a track,
         making it sound fun and energetic by increasing the bass
         and the highs.
         """
-
         levels = [
             (0, -0.075),
             (1, 0.125),
@@ -184,11 +180,11 @@ class Equalizer(Filter):
 
     @classmethod
     def metal(cls):
-        """Equalizer preset which increases the mids of a track,
+        """
+        Equalizer preset which increases the mids of a track,
         preferably one of the metal genre, to make it sound
         more full and concert-like.
         """
-
         levels = [
             (0, 0.0),
             (1, 0.1),
@@ -211,11 +207,11 @@ class Equalizer(Filter):
 
     @classmethod
     def piano(cls):
-        """Equalizer preset which increases the mids and highs
+        """
+        Equalizer preset which increases the mids and highs
         of a track, preferably a piano based one, to make it
         stand out.
         """
-
         levels = [
             (0, -0.25),
             (1, -0.25),
@@ -236,7 +232,8 @@ class Equalizer(Filter):
 
 
 class Timescale(Filter):
-    """Filter which changes the speed and pitch of a track.
+    """
+    Filter which changes the speed and pitch of a track.
     You can make some very nice effects with this filter,
     i.e: a vaporwave-esque filter which slows the track down
     a certain amount to produce said effect.
@@ -261,22 +258,22 @@ class Timescale(Filter):
 
     @classmethod
     def vaporwave(cls):
-        """Timescale preset which slows down the currently playing track,
+        """
+        Timescale preset which slows down the currently playing track,
         giving it the effect of a half-speed record/casette playing.
 
         This preset will assign the tag 'vaporwave'.
         """
-
         return cls(tag="vaporwave", speed=0.8, pitch=0.8)
 
     @classmethod
     def nightcore(cls):
-        """Timescale preset which speeds up the currently playing track,
-        which matches up to nightcore, a genre of sped-up music
+        """
+        Timescale preset which speeds up the currently playing track,
+        which matches up to nightcore, a genre of sped-up music.
 
         This preset will assign the tag 'nightcore'.
         """
-
         return cls(tag="nightcore", speed=1.25, pitch=1.3)
 
     def __repr__(self):
@@ -284,7 +281,8 @@ class Timescale(Filter):
 
 
 class Karaoke(Filter):
-    """Filter which filters the vocal track from any song and leaves the instrumental.
+    """
+    Filter which filters the vocal track from any song and leaves the instrumental.
     Best for karaoke as the filter implies.
     """
 
@@ -317,13 +315,12 @@ class Karaoke(Filter):
 
 
 class Tremolo(Filter):
-    """Filter which produces a wavering tone in the music,
+    """
+    Filter which produces a wavering tone in the music,
     causing it to sound like the music is changing in volume rapidly.
     """
 
-    def __init__(
-        self, *, tag: str = "tremolo", frequency: float = 2.0, depth: float = 0.5
-    ):
+    def __init__(self, *, tag: str = "tremolo", frequency: float = 2.0, depth: float = 0.5):
         super().__init__()
         self._init_with_scope(
             {"frequency": [0, 5], "depth": [0, 1]},
@@ -337,13 +334,12 @@ class Tremolo(Filter):
 
 
 class Vibrato(Filter):
-    """Filter which produces a wavering tone in the music, similar to the Tremolo filter,
+    """
+    Filter which produces a wavering tone in the music, similar to the Tremolo filter,
     but changes in pitch rather than volume.
     """
 
-    def __init__(
-        self, *, tag: str = "vibrato", frequency: float = 2.0, depth: float = 0.5
-    ):
+    def __init__(self, *, tag: str = "vibrato", frequency: float = 2.0, depth: float = 0.5):
         super().__init__()
         self._init_with_scope(
             {"frequency": [0, 14], "depth": [0, 1]},
@@ -357,15 +353,14 @@ class Vibrato(Filter):
 
 
 class Rotation(Filter):
-    """Filter which produces a stereo-like panning effect, which sounds like
-    the audio is being rotated around the listener's head
+    """
+    Filter which produces a stereo-like panning effect, which sounds like
+    the audio is being rotated around the listener's head.
     """
 
     def __init__(self, *, tag: str = "rotation", rotation_hertz: float = 5):
         super().__init__()
-        self._init_with_scope(
-            {"rotationHz": [0, 10]}, tag=tag, rotationHz=rotation_hertz
-        )
+        self._init_with_scope({"rotationHz": [0, 10]}, tag=tag, rotationHz=rotation_hertz)
 
     @classmethod
     def nightD(cls):
@@ -376,7 +371,8 @@ class Rotation(Filter):
 
 
 class ChannelMix(Filter):
-    """Filter which manually adjusts the panning of the audio, which can make
+    """
+    Filter which manually adjusts the panning of the audio, which can make
     for some cool effects when done correctly.
     """
 
@@ -409,7 +405,8 @@ class ChannelMix(Filter):
 
 
 class Distortion(Filter):
-    """Filter which generates a distortion effect. Useful for certain filter implementations where
+    """
+    Filter which generates a distortion effect. Useful for certain filter implementations where
     distortion is needed.
     """
 
@@ -454,7 +451,8 @@ class Distortion(Filter):
 
 
 class LowPass(Filter):
-    """Filter which supresses higher frequencies and allows lower frequencies to pass.
+    """
+    Filter which supresses higher frequencies and allows lower frequencies to pass.
     You can also do this with the Equalizer filter, but this is an easier way to do it.
     """
 

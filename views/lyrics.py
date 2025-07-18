@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,7 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import builtins
+import contextlib
+
 import discord
+
 import function as func
 
 
@@ -50,7 +55,7 @@ class LyricsView(discord.ui.View):
 
         self.name: str = name
         self.source: dict[str, list[str]] = source
-        self.lang: list[str] = list(source.keys())[0]
+        self.lang: list[str] = next(iter(source.keys()))
         self.author: discord.Member = author
 
         self.response: discord.Message = None
@@ -64,10 +69,8 @@ class LyricsView(discord.ui.View):
     async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await self.response.edit(view=self)
-        except:
-            pass
 
     async def on_error(self, error, item, interaction) -> None:
         return
@@ -83,44 +86,38 @@ class LyricsView(discord.ui.View):
         return embed
 
     @discord.ui.button(label="<<", style=discord.ButtonStyle.grey)
-    async def fast_back_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page != 1:
             self.current_page = 1
             return await interaction.response.edit_message(embed=self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(label="Back", style=discord.ButtonStyle.blurple)
-    async def back_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page > 1:
             self.current_page -= 1
             return await interaction.response.edit_message(embed=self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple)
-    async def next_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page < self.pages:
             self.current_page += 1
             return await interaction.response.edit_message(embed=self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(label=">>", style=discord.ButtonStyle.grey)
-    async def fast_next_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page != self.pages:
             self.current_page = self.pages
             return await interaction.response.edit_message(embed=self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(emoji="🗑️", style=discord.ButtonStyle.red)
-    async def stop_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await self.response.delete()
         self.stop()

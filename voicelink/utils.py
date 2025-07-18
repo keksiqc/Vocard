@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -22,20 +23,19 @@ SOFTWARE.
 """
 
 import random
-import time
 import socket
-from timeit import default_timer as timer
+import time
 from itertools import zip_longest
+from timeit import default_timer as timer
 
-from typing import Dict, Optional
 
 __all__ = [
     "ExponentialBackoff",
-    "NodeStats",
-    "NodeInfoVersion",
     "NodeInfo",
-    "Plugin",
+    "NodeInfoVersion",
+    "NodeStats",
     "Ping",
+    "Plugin",
 ]
 
 
@@ -86,18 +86,19 @@ class ExponentialBackoff:
 
 
 class NodeStats:
-    """The base class for the node stats object.
+    """
+    The base class for the node stats object.
     Gives critical information on the node, which is updated every minute.
     """
 
-    def __init__(self, data: Dict) -> None:
-        memory: Dict = data.get("memory")
+    def __init__(self, data: dict) -> None:
+        memory: dict = data.get("memory")
         self.used: int = memory.get("used")
         self.free: int = memory.get("free")
         self.reservable: int = memory.get("reservable")
         self.allocated: int = memory.get("allocated")
 
-        cpu: Dict = data.get("cpu")
+        cpu: dict = data.get("cpu")
         self.cpu_cores: int = cpu.get("cores")
         self.cpu_system_load: float = cpu.get("systemLoad")
         self.cpu_process_load: float = cpu.get("lavalinkLoad")
@@ -111,40 +112,41 @@ class NodeStats:
 
 
 class NodeInfoVersion:
-    """The base class for the node info object.
+    """
+    The base class for the node info object.
     Gives version information on the node.
     """
 
-    def __init__(self, data: Dict) -> None:
+    def __init__(self, data: dict) -> None:
         self.semver: str = data.get("semver")
         self.major: int = data.get("major")
         self.minor: int = data.get("minor")
         self.patch: int = data.get("patch")
-        self.pre_release: Optional[str] = data.get("preRelease")
-        self.build: Optional[str] = data.get("build")
+        self.pre_release: str | None = data.get("preRelease")
+        self.build: str | None = data.get("build")
 
 
 class NodeInfo:
-    """The base class for the node info object.
+    """
+    The base class for the node info object.
     Gives basic information on the node.
     """
 
-    def __init__(self, data: Dict) -> None:
+    def __init__(self, data: dict) -> None:
         self.version: NodeInfoVersion = NodeInfoVersion(data.get("version"))
         self.build_time: int = data.get("buildTime")
         self.jvm: str = data.get("jvm")
         self.lavaplayer: str = data.get("lavaplayer")
-        self.plugins: Optional[Dict[str, Plugin]] = [
-            Plugin(plugin_data) for plugin_data in data.get("plugins")
-        ]
+        self.plugins: dict[str, Plugin] | None = [Plugin(plugin_data) for plugin_data in data.get("plugins")]
 
 
 class Plugin:
-    """The base class for the plugin object.
+    """
+    The base class for the plugin object.
     Gives basic information on the plugin.
     """
 
-    def __init__(self, data: Dict) -> None:
+    def __init__(self, data: dict) -> None:
         self.name: str = data.get("name")
         self.version: str = data.get("version")
 
@@ -161,30 +163,30 @@ class Ping:
         self._port = port
         self._timeout = timeout
 
-    class Socket(object):
+    class Socket:
         def __init__(self, family, type_, timeout):
             s = socket.socket(family, type_)
             s.settimeout(timeout)
             self._s = s
 
-        def connect(self, host, port):
+        def connect(self, host, port) -> None:
             self._s.connect((host, int(port)))
 
-        def shutdown(self):
+        def shutdown(self) -> None:
             self._s.shutdown(socket.SHUT_RD)
 
-        def close(self):
+        def close(self) -> None:
             self._s.close()
 
-    class Timer(object):
+    class Timer:
         def __init__(self):
             self._start = 0
             self._stop = 0
 
-        def start(self):
+        def start(self) -> None:
             self._start = timer()
 
-        def stop(self):
+        def stop(self) -> None:
             self._stop = timer()
 
         def cost(self, funcs, args):
@@ -204,9 +206,5 @@ class Ping:
     def get_ping(self):
         s = self._create_socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        cost_time = self.timer.cost(
-            (s.connect, s.shutdown), ((self._host, self._port), None)
-        )
-        s_runtime = 1000 * (cost_time)
-
-        return s_runtime
+        cost_time = self.timer.cost((s.connect, s.shutdown), ((self._host, self._port), None))
+        return 1000 * (cost_time)

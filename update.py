@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -23,19 +24,20 @@ SOFTWARE.
 
 import argparse
 import os
-import sys
-import requests
-import zipfile
 import shutil
 import subprocess
+import sys
+import zipfile
 from io import BytesIO
+
+import requests
+
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 __version__ = "v2.7.1"
 
 # URLs for update and migration
 PYTHON_CMD_NAME = os.path.basename(sys.executable)
-print(PYTHON_CMD_NAME)
 GITHUB_API_URL = "https://api.github.com/repos/ChocoMeow/Vocard/releases/latest"
 VOCARD_URL = "https://github.com/ChocoMeow/Vocard/archive/"
 MIGRATION_SCRIPT_URL = f"https://raw.githubusercontent.com/ChocoMeow/Vocard-Magration/main/{__version__}.py"
@@ -50,7 +52,8 @@ class bcolors:
 
 
 def check_version(with_msg=False):
-    """Check for the latest version of the project.
+    """
+    Check for the latest version of the project.
 
     Args:
         with_msg (bool): option to print the message.
@@ -61,17 +64,13 @@ def check_version(with_msg=False):
     response = requests.get(GITHUB_API_URL)
     latest_version = response.json().get("name", __version__)
     if with_msg:
-        msg = (
-            f"{bcolors.OKGREEN}Your bot is up-to-date! - {latest_version}{bcolors.ENDC}"
-            if latest_version == __version__
-            else f"{bcolors.WARNING}Your bot is not up-to-date! The latest version is {latest_version} and you are currently running version {__version__}\nRun `{PYTHON_CMD_NAME} update.py -l` to update your bot!{bcolors.ENDC}"
-        )
-        print(msg)
+        pass
     return latest_version
 
 
 def download_file(version=None):
-    """Download the latest version of the project.
+    """
+    Download the latest version of the project.
 
     Args:
         version (str): the version to download. If None, download the latest version.
@@ -80,17 +79,15 @@ def download_file(version=None):
         Response: the downloaded zip file content.
     """
     version = version if version else check_version()
-    print(f"Downloading Vocard version: {version}")
     response = requests.get(VOCARD_URL + version + ".zip")
     if response.status_code == 404:
-        print(f"{bcolors.FAIL}Warning: Version not found!{bcolors.ENDC}")
-        exit(1)
-    print("Download Completed")
+        sys.exit(1)
     return response
 
 
-def install(response, version):
-    """Install the downloaded version of the project.
+def install(response, version) -> None:
+    """
+    Install the downloaded version of the project.
 
     Args:
         response (Response): the downloaded zip file content.
@@ -105,7 +102,6 @@ def install(response, version):
     )
 
     if user_input.lower() in ["y", "yes"]:
-        print("Installing ...")
         zfile = zipfile.ZipFile(BytesIO(response.content))
         zfile.extractall(ROOT_DIR)
 
@@ -114,7 +110,7 @@ def install(response, version):
         source_dir = os.path.join(ROOT_DIR, f"Vocard-{version_without_v}")
         if os.path.exists(source_dir):
             for filename in os.listdir(ROOT_DIR):
-                if filename in IGNORE_FILES + [f"Vocard-{version_without_v}"]:
+                if filename in [*IGNORE_FILES, f"Vocard-{version_without_v}"]:
                     continue
 
                 filename_path = os.path.join(ROOT_DIR, filename)
@@ -123,65 +119,48 @@ def install(response, version):
                 else:
                     os.remove(filename_path)
             for filename in os.listdir(source_dir):
-                shutil.move(
-                    os.path.join(source_dir, filename), os.path.join(ROOT_DIR, filename)
-                )
+                shutil.move(os.path.join(source_dir, filename), os.path.join(ROOT_DIR, filename))
             os.rmdir(source_dir)
-        print(
-            f"{bcolors.OKGREEN}Version {version} installed Successfully! Run `{PYTHON_CMD_NAME} main.py` to start your bot{bcolors.ENDC}"
-        )
     else:
-        print("Update canceled!")
+        pass
 
 
-def run_migration():
+def run_migration() -> None:
     """Download, execute, and remove the migration script."""
     confirm = input(
         f"{bcolors.WARNING}WARNING: Please ensure you have taken a backup before proceeding.\n"
         f"Are you sure you want to run the migration? (Y/n): {bcolors.ENDC} "
     )
     if confirm.lower() not in ["y", "yes"]:
-        print("Migration canceled!")
         return
 
-    print("Downloading migration script...")
     response = requests.get(MIGRATION_SCRIPT_URL)
     if response.status_code != 200:
-        print(
-            f"{bcolors.FAIL}Failed to download migration script. Status code: {response.status_code}{bcolors.ENDC}"
-        )
-        exit(1)
+        sys.exit(1)
 
     migration_filename = "temp_migration.py"
     with open(migration_filename, "w", encoding="utf-8") as f:
         f.write(response.text)
 
-    print("Executing migration script...")
     try:
         subprocess.run([PYTHON_CMD_NAME, migration_filename], check=True)
-        print(f"{bcolors.OKGREEN}Migration script executed successfully.{bcolors.ENDC}")
-    except subprocess.CalledProcessError as e:
-        print(f"{bcolors.FAIL}Migration script execution failed: {e}{bcolors.ENDC}")
+    except subprocess.CalledProcessError:
+        pass
     finally:
         if os.path.exists(migration_filename):
             os.remove(migration_filename)
-            print("Temporary migration script deleted.")
 
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Update and migration script for Vocard."
-    )
+    parser = argparse.ArgumentParser(description="Update and migration script for Vocard.")
     parser.add_argument(
         "-c",
         "--check",
         action="store_true",
         help="Check the current version of the Vocard",
     )
-    parser.add_argument(
-        "-v", "--version", type=str, help="Install the specified version of the Vocard"
-    )
+    parser.add_argument("-v", "--version", type=str, help="Install the specified version of the Vocard")
     parser.add_argument(
         "-l",
         "--latest",
@@ -203,7 +182,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     """Main function."""
     args = parse_args()
 
@@ -227,9 +206,7 @@ def main():
     elif args.migration:
         run_migration()
     else:
-        print(
-            f"{bcolors.FAIL}No arguments provided. Run `{PYTHON_CMD_NAME} update.py -h` for help.{bcolors.ENDC}"
-        )
+        pass
 
 
 if __name__ == "__main__":

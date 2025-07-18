@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,6 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import builtins
+import contextlib
+
 import discord
 from discord.ext import commands
 
@@ -36,12 +40,8 @@ class HelpDropdown(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=[
-                discord.SelectOption(
-                    emoji="🆕", label="News", description="View new updates of Vocard."
-                ),
-                discord.SelectOption(
-                    emoji="🕹️", label="Tutorial", description="How to use Vocard."
-                ),
+                discord.SelectOption(emoji="🆕", label="News", description="View new updates of Vocard."),
+                discord.SelectOption(emoji="🕹️", label="Tutorial", description="How to use Vocard."),
             ]
             + [
                 discord.SelectOption(
@@ -49,9 +49,7 @@ class HelpDropdown(discord.ui.Select):
                     label=f"{category} Commands",
                     description=f"This is {category.lower()} Category.",
                 )
-                for category, emoji in zip(
-                    categories, ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"]
-                )
+                for category, emoji in zip(categories, ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"], strict=False)
             ],
             custom_id="select",
         )
@@ -68,15 +66,9 @@ class HelpView(discord.ui.View):
         self.author: discord.Member = author
         self.bot: commands.Bot = bot
         self.response: discord.Message = None
-        self.categories: list[str] = [
-            name.capitalize()
-            for name, cog in bot.cogs.items()
-            if len([c for c in cog.walk_commands()])
-        ]
+        self.categories: list[str] = [name.capitalize() for name, cog in bot.cogs.items() if list(cog.walk_commands())]
 
-        self.add_item(
-            discord.ui.Button(label="Website", emoji="🌎", url="https://vocard.xyz")
-        )
+        self.add_item(discord.ui.Button(label="Website", emoji="🌎", url="https://vocard.xyz"))
         self.add_item(
             discord.ui.Button(
                 label="Document",
@@ -107,10 +99,8 @@ class HelpView(discord.ui.View):
         for child in self.children:
             if child.custom_id == "select":
                 child.disabled = True
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await self.response.edit(view=self)
-        except:
-            pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> None:
         return interaction.user == self.author
@@ -126,9 +116,7 @@ class HelpView(discord.ui.View):
             embed.add_field(
                 name=f"Available Categories: [{2 + len(self.categories)}]",
                 value="```py\n👉 News\n2. Tutorial\n{}```".format(
-                    "".join(
-                        f"{i}. {c}\n" for i, c in enumerate(self.categories, start=3)
-                    )
+                    "".join(f"{i}. {c}\n" for i, c in enumerate(self.categories, start=3))
                 ),
                 inline=True,
             )
@@ -143,29 +131,29 @@ class HelpView(discord.ui.View):
 
             return embed
 
-        embed = discord.Embed(
-            title=f"Category: {category.capitalize()}", color=func.settings.embed_color
-        )
+        embed = discord.Embed(title=f"Category: {category.capitalize()}", color=func.settings.embed_color)
         embed.add_field(
             name=f"Categories: [{2 + len(self.categories)}]",
             value="```py\n"
             + "\n".join(
                 ("👉 " if c == category.capitalize() else f"{i}. ") + c
-                for i, c in enumerate(["News", "Tutorial"] + self.categories, start=1)
+                for i, c in enumerate(["News", "Tutorial", *self.categories], start=1)
             )
             + "```",
             inline=True,
         )
 
         if category == "tutorial":
-            embed.description = "How can use Vocard? Some simple commands you should know now after watching this video."
+            embed.description = (
+                "How can use Vocard? Some simple commands you should know now after watching this video."
+            )
             embed.set_image(
                 url="https://cdn.discordapp.com/attachments/674788144931012638/917656288899514388/final_61aef3aa7836890135c6010c_669380.gif"
             )
         else:
-            cog = [c for _, c in self.bot.cogs.items() if _.lower() == category][0]
+            cog = next(c for _, c in self.bot.cogs.items() if _.lower() == category)
 
-            commands = [command for command in cog.walk_commands()]
+            commands = list(cog.walk_commands())
             embed.description = cog.description
             embed.add_field(
                 name=f"{category} Commands: [{len(commands)}]",
@@ -173,7 +161,7 @@ class HelpView(discord.ui.View):
                     "".join(
                         f"/{command.qualified_name}\n"
                         for command in commands
-                        if not command.qualified_name == cog.qualified_name
+                        if command.qualified_name != cog.qualified_name
                     )
                 ),
             )

@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -26,13 +27,13 @@ __author__ = "Vocard Development, ChocoMeow"
 __license__ = "MIT"
 __copyright__ = "Copyright 2023 - present (c) Vocard Development, ChocoMeow"
 
-from .enums import SearchType, LoopType
+from .enums import LoopType, SearchType
 from .events import *
 from .exceptions import *
 from .filters import *
 from .objects import *
+from .placeholders import Placeholders, build_embed
 from .player import Player, connect_channel
 from .pool import *
 from .queue import *
-from .placeholders import Placeholders, build_embed
-from .transformer import encode, decode
+from .transformer import decode, encode

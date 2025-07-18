@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,27 +22,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import discord
-import function as func
-
+import builtins
+import contextlib
 from math import ceil
 from typing import TYPE_CHECKING
+
+import discord
+
+import function as func
+
 
 if TYPE_CHECKING:
     from voicelink import Player, Track
 
 
 class ListView(discord.ui.View):
-    def __init__(
-        self, player: "Player", author: discord.Member, is_queue: bool = True
-    ) -> None:
+    def __init__(self, player: "Player", author: discord.Member, is_queue: bool = True) -> None:
         super().__init__(timeout=60)
         self.player: Player = player
 
         self.is_queue: bool = is_queue
-        self.tracks: list[Track] = (
-            player.queue.tracks() if is_queue else player.queue.history()
-        )
+        self.tracks: list[Track] = player.queue.tracks() if is_queue else player.queue.history()
         self.response: discord.Message = None
 
         if not is_queue:
@@ -59,10 +60,8 @@ class ListView(discord.ui.View):
     async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await self.response.edit(view=self)
-        except:
-            pass
 
     async def on_error(self, error, item, interaction) -> None:
         return
@@ -86,9 +85,7 @@ class ListView(discord.ui.View):
 
         embed = discord.Embed(title=texts[0], color=func.settings.embed_color)
         embed.description = (
-            texts[1].format(
-                self.player.current.uri, f"```{self.player.current.title}```"
-            )
+            texts[1].format(self.player.current.uri, f"```{self.player.current.title}```")
             if self.player.current
             else texts[2].format("None")
         )
@@ -112,52 +109,38 @@ class ListView(discord.ui.View):
         return embed
 
     @discord.ui.button(label="<<", style=discord.ButtonStyle.grey)
-    async def fast_back_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page != 1:
             self.current_page = 1
-            return await interaction.response.edit_message(
-                embed=await self.build_embed()
-            )
+            return await interaction.response.edit_message(embed=await self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(label="Back", style=discord.ButtonStyle.blurple)
-    async def back_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page > 1:
             self.current_page -= 1
-            return await interaction.response.edit_message(
-                embed=await self.build_embed()
-            )
+            return await interaction.response.edit_message(embed=await self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple)
-    async def next_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page < self.page:
             self.current_page += 1
-            return await interaction.response.edit_message(
-                embed=await self.build_embed()
-            )
+            return await interaction.response.edit_message(embed=await self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(label=">>", style=discord.ButtonStyle.grey)
-    async def fast_next_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.current_page != self.page:
             self.current_page = self.page
-            return await interaction.response.edit_message(
-                embed=await self.build_embed()
-            )
+            return await interaction.response.edit_message(embed=await self.build_embed())
         await interaction.response.defer()
+        return None
 
     @discord.ui.button(emoji="🗑️", style=discord.ButtonStyle.red)
-    async def stop_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await self.response.delete()
         self.stop()

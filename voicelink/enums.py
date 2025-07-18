@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -25,7 +26,8 @@ from enum import Enum, auto
 
 
 class LoopType(Enum):
-    """The enum for the different loop types for Voicelink
+    """
+    The enum for the different loop types for Voicelink.
 
     LoopType.OFF: 1
     LoopType.TRACK: 2
@@ -39,7 +41,8 @@ class LoopType(Enum):
 
 
 class SearchType(Enum):
-    """The enum for the different search types for Voicelink.
+    """
+    The enum for the different search types for Voicelink.
 
     SearchType.YOUTUBE searches using regular Youtube,
     which is best for all scenarios.
@@ -68,7 +71,7 @@ class SearchType(Enum):
 
     @classmethod
     def match(cls, value: str):
-        """find an enum based on a search string."""
+        """Find an enum based on a search string."""
         normalized_value = value.lower().replace("_", "").replace(" ", "")
 
         for member in cls:
@@ -83,7 +86,7 @@ class SearchType(Enum):
 
 
 class RequestMethod(Enum):
-    """The enum for the different request methods in Voicelink"""
+    """The enum for the different request methods in Voicelink."""
 
     GET = "get"
     PATCH = "patch"
@@ -95,7 +98,8 @@ class RequestMethod(Enum):
 
 
 class NodeAlgorithm(Enum):
-    """The enum for the different node algorithms in Voicelink.
+    """
+    The enum for the different node algorithms in Voicelink.
 
     The enums in this class are to only differentiate different
     methods, since the actual method is handled in the

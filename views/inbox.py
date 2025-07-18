@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,11 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import discord
+import builtins
+import contextlib
 import time
-import function as func
-
 from typing import Any
+
+import discord
+
+import function as func
 
 
 class Select_message(discord.ui.Select):
@@ -46,7 +50,7 @@ class Select_message(discord.ui.Select):
             custom_id="select",
         )
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction) -> None:
         self.view.current = self.view.inbox[int(self.values[0].split(". ")[0]) - 1]
         await self.view.button_change(interaction)
 
@@ -94,7 +98,7 @@ class InboxView(discord.ui.View):
     async def button_change(self, interaction: discord.Interaction):
         for child in self.children:
             if child.custom_id in ["accept", "dismiss"]:
-                child.disabled = True if self.current is None else False
+                child.disabled = self.current is None
             elif child.custom_id == "select":
                 child.options = [
                     discord.SelectOption(
@@ -109,14 +113,13 @@ class InboxView(discord.ui.View):
             await interaction.response.edit_message(embed=self.build_embed(), view=None)
             return self.stop()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        return None
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await self.response.edit(view=self)
-        except:
-            pass
 
     @discord.ui.button(
         label="Accept",
@@ -124,9 +127,7 @@ class InboxView(discord.ui.View):
         custom_id="accept",
         disabled=True,
     )
-    async def accept_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def accept_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self.new_playlist.append(self.current)
         self.inbox.remove(self.current)
         self.current = None
@@ -138,18 +139,12 @@ class InboxView(discord.ui.View):
         custom_id="dismiss",
         disabled=True,
     )
-    async def dismiss_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def dismiss_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self.inbox.remove(self.current)
         self.current = None
         await self.button_change(interaction)
 
-    @discord.ui.button(
-        label="Click Me To Save The Changes", style=discord.ButtonStyle.blurple
-    )
-    async def save_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    @discord.ui.button(label="Click Me To Save The Changes", style=discord.ButtonStyle.blurple)
+    async def save_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await self.response.edit(view=None)
         self.stop()

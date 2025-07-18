@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -21,16 +22,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import discord
+import builtins
+import contextlib
 import copy
-import function as func
 
-from typing import List
+import discord
 from discord.ext import commands
+
+import function as func
 
 
 class Modal(discord.ui.Modal):
-    def __init__(self, items: List[discord.ui.Item], *args, **kwargs) -> None:
+    def __init__(self, items: list[discord.ui.Item], *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         for item in items:
             self.add_item(item)
@@ -66,7 +69,7 @@ class Dropdown(discord.ui.Select):
             options=options,
         )
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction) -> None:
         self.view.embedType = self.values[0].lower()
         if self.view.embedType not in self.view.data:
             self.view.data[self.view.embedType] = {}
@@ -89,25 +92,19 @@ class EmbedBuilderView(discord.ui.View):
         self.embedType: str = "active"
 
         self.ph: Placeholders = Placeholders(context.bot)
-        self.build_embed = lambda: build_embed(
-            self.data.get(self.embedType, {}), self.ph
-        )
+        self.build_embed = lambda: build_embed(self.data.get(self.embedType, {}), self.ph)
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await self.response.edit(view=self)
-        except:
-            pass
 
     async def interaction_check(self, interaction: discord.Interaction):
         return interaction.user == self.author
 
     @discord.ui.button(label="Edit Content", style=discord.ButtonStyle.blurple)
-    async def edit_content(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def edit_content(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = self.data.get(self.embedType, {})
         items = [
             discord.ui.TextInput(
@@ -166,9 +163,7 @@ class EmbedBuilderView(discord.ui.View):
     @discord.ui.button(
         label="Edit Author",
     )
-    async def edit_author(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def edit_author(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = self.data.get(self.embedType, {})
         items = [
             discord.ui.TextInput(
@@ -216,9 +211,7 @@ class EmbedBuilderView(discord.ui.View):
         return await interaction.edit_original_response(embed=self.build_embed())
 
     @discord.ui.button(label="Edit Image")
-    async def edit_image(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def edit_image(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = self.data.get(self.embedType, {})
         items = [
             discord.ui.TextInput(
@@ -251,9 +244,7 @@ class EmbedBuilderView(discord.ui.View):
         return await interaction.edit_original_response(embed=self.build_embed())
 
     @discord.ui.button(label="Edit Footer")
-    async def edit_footer(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def edit_footer(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = self.data.get(self.embedType, {})
         items = [
             discord.ui.TextInput(
@@ -288,9 +279,7 @@ class EmbedBuilderView(discord.ui.View):
         return await interaction.edit_original_response(embed=self.build_embed())
 
     @discord.ui.button(label="Add Field", style=discord.ButtonStyle.green, row=1)
-    async def add_field(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def add_field(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = self.data.get(self.embedType)
         items = [
             discord.ui.TextInput(
@@ -329,16 +318,14 @@ class EmbedBuilderView(discord.ui.View):
             {
                 "name": v["name"],
                 "value": v["value"],
-                "inline": True if v["inline"].lower() == "true" else False,
+                "inline": v["inline"].lower() == "true",
             }
         )
 
         return await interaction.edit_original_response(embed=self.build_embed())
 
     @discord.ui.button(label="Remove Field", style=discord.ButtonStyle.red, row=1)
-    async def remove_field(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def remove_field(self, interaction: discord.Interaction, button: discord.ui.Button):
         items = [
             discord.ui.TextInput(
                 label="Index",
@@ -352,9 +339,7 @@ class EmbedBuilderView(discord.ui.View):
             data["fields"] = []
 
         if len(data["fields"]) == 0:
-            return await interaction.response.send_message(
-                "There are no fields to remove!", ephemeral=True
-            )
+            return await interaction.response.send_message("There are no fields to remove!", ephemeral=True)
 
         modal = Modal(items, title="Remove Field")
         await interaction.response.send_modal(modal)
@@ -363,14 +348,12 @@ class EmbedBuilderView(discord.ui.View):
         try:
             del data["fields"][int(modal.values["index"])]
         except:
-            return await interaction.followup.send(
-                "Can't found the field", ephemeral=True
-            )
+            return await interaction.followup.send("Can't found the field", ephemeral=True)
 
         return await interaction.edit_original_response(embed=self.build_embed())
 
     @discord.ui.button(label="Apply", style=discord.ButtonStyle.green, row=1)
-    async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def apply(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await func.update_settings(
             interaction.guild_id,
             {"$set": {"default_controller.embeds": self.data}},
@@ -386,8 +369,6 @@ class EmbedBuilderView(discord.ui.View):
         return await interaction.response.edit_message(embed=self.build_embed())
 
     @discord.ui.button(emoji="🗑️", row=1)
-    async def stop_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await self.response.delete()
         self.stop()

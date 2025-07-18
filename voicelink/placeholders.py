@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -24,15 +25,16 @@ SOFTWARE.
 from __future__ import annotations
 
 import re
-import function as func
-
-from discord import Embed, Client
-
 from typing import TYPE_CHECKING
 
+from discord import Client, Embed
+
+import function as func
+
+
 if TYPE_CHECKING:
-    from .player import Player
     from .objects import Track
+    from .player import Player
 
 
 def ensure_track(func) -> callable:
@@ -96,9 +98,7 @@ class Placeholders:
 
     @ensure_track
     def track_duration(self, track: Track) -> str:
-        return (
-            self.player.get_msg("live") if track.is_stream else func.time(track.length)
-        )
+        return self.player.get_msg("live") if track.is_stream else func.time(track.length)
 
     @ensure_track
     def track_requester_id(self, track: Track) -> str:
@@ -114,11 +114,7 @@ class Placeholders:
 
     @ensure_track
     def track_requester_avatar(self, track: Track) -> str:
-        return (
-            track.requester.display_avatar.url
-            if track.requester
-            else self.bot.user.display_avatar.url
-        )
+        return track.requester.display_avatar.url if track.requester else self.bot.user.display_avatar.url
 
     @ensure_track
     def track_color(self, track: Track) -> int:
@@ -163,15 +159,11 @@ class Placeholders:
         return func.settings.embed_color
 
     def bot_icon(self) -> str:
-        return (
-            self.bot.user.display_avatar.url
-            if self.player
-            else "https://i.imgur.com/dIFBwU7.png"
-        )
+        return self.bot.user.display_avatar.url if self.player else "https://i.imgur.com/dIFBwU7.png"
 
     def replace(self, text: str, variables: dict[str, str]) -> str:
         if not text or text.isspace():
-            return
+            return None
         pattern = r"\{\{(.*?)\}\}"
         matches: list[str] = re.findall(pattern, text)
 
@@ -182,9 +174,7 @@ class Placeholders:
 
             # Split the true and false values
             if "//" in parts[1]:
-                true_value, false_value = [
-                    part.strip() for part in parts[1].split("//")
-                ]
+                true_value, false_value = [part.strip() for part in parts[1].split("//")]
             else:
                 true_value = parts[1].strip()
 
@@ -195,9 +185,7 @@ class Placeholders:
                     lambda x: "'" + variables.get(x.group(1), "") + "'",
                     expression,
                 )
-                expression = re.sub(
-                    r"'(\d+)'", lambda x: str(int(x.group(1))), expression
-                )
+                expression = re.sub(r"'(\d+)'", lambda x: str(int(x.group(1))), expression)
                 expression = re.sub(
                     r"'(\d+)'\s*([><=!]+)\s*(\d+)",
                     lambda x: f"{int(x.group(1))} {x.group(2)} {int(x.group(3))}",
@@ -214,17 +202,13 @@ class Placeholders:
             except:
                 text = text.replace("{{" + match + "}}", "")
 
-        text = re.sub(r"@@(.*?)@@", lambda x: str(variables.get(x.group(1), "")), text)
-        return text
+        return re.sub(r"@@(.*?)@@", lambda x: str(variables.get(x.group(1), "")), text)
 
 
 def build_embed(raw: dict[str, dict], placeholder: Placeholders) -> Embed:
     embed = Embed()
     try:
-        rv = {
-            key: func() if callable(func) else func
-            for key, func in placeholder.variables.items()
-        }
+        rv = {key: func() if callable(func) else func for key, func in placeholder.variables.items()}
         if author := raw.get("author"):
             embed.set_author(
                 name=placeholder.replace(author.get("name"), rv),

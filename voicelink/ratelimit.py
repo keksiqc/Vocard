@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -23,7 +24,8 @@ SOFTWARE.
 
 import time
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, TYPE_CHECKING, Any
+from typing import Any, TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from .pool import Node
@@ -44,38 +46,28 @@ class YTToken:
 
 
 class YTRatelimit(ABC):
-    """
-    Abstract base class for YouTube rate limit strategies.
-    """
+    """Abstract base class for YouTube rate limit strategies."""
 
-    def __init__(self, node: "Node", tokens: List[str]) -> None:
-        self.node: "Node" = node
-        self.tokens: List[YTToken] = [YTToken(token) for token in tokens]
-        self.active_token: Optional[YTToken] = self.tokens[0] if self.tokens else None
+    def __init__(self, node: "Node", tokens: list[str]) -> None:
+        self.node: Node = node
+        self.tokens: list[YTToken] = [YTToken(token) for token in tokens]
+        self.active_token: YTToken | None = self.tokens[0] if self.tokens else None
 
     @abstractmethod
     async def flag_active_token(self) -> None:
-        """
-        Mark the current active token as flagged when a rate-limit is encountered.
-        """
-        pass
+        """Mark the current active token as flagged when a rate-limit is encountered."""
 
     @abstractmethod
     async def handle_request(self) -> None:
-        """
-        Update usage count or perform any necessary pre-request operations.
-        """
-        pass
+        """Update usage count or perform any necessary pre-request operations."""
 
-    async def swap_token(self) -> Optional[YTToken]:
+    async def swap_token(self) -> YTToken | None:
         """
         Swap the active token with another token that is either not flagged or ready to retry.
         If a new token is found, update it via the node and return it.
         """
         for token in self.tokens:
-            if token != self.active_token and (
-                not token.is_flagged or token.allow_retry
-            ):
+            if token != self.active_token and (not token.is_flagged or token.allow_retry):
                 try:
                     await self.node.update_refresh_yt_access_token(token)
                     self.active_token = token
@@ -86,39 +78,29 @@ class YTRatelimit(ABC):
                         exc_info=e,
                     )
 
-        self.node._logger.warning(
-            "No active token available for processing the request."
-        )
+        self.node._logger.warning("No active token available for processing the request.")
         return None
 
 
 class LoadBalance(YTRatelimit):
-    """
-    A rate limiting strategy that load balances requests across tokens.
-    """
+    """A rate limiting strategy that load balances requests across tokens."""
 
-    def __init__(self, node: "Node", config: Dict[str, Any]):
+    def __init__(self, node: "Node", config: dict[str, Any]):
         super().__init__(node, tokens=config.get("tokens", []))
-        self._config: Dict[str, Any] = config.get("config", {})
+        self._config: dict[str, Any] = config.get("config", {})
         self._retry_time: int = self._config.get("retry_time", 10_800)
         self._max_requests: int = self._config.get("max_requests", 30)
 
     async def flag_active_token(self) -> None:
-        """
-        Flag the active token and set a delay (e.g., 3 hours) until it can be retried.
-        """
+        """Flag the active token and set a delay (e.g., 3 hours) until it can be retried."""
         if self.active_token:
             self.active_token.is_flagged = True
             self.active_token.flagged_time = time.time()
-            self.active_token.allow_retry_time = (
-                self.active_token.flagged_time + self._retry_time
-            )
+            self.active_token.allow_retry_time = self.active_token.flagged_time + self._retry_time
             await self.swap_token()
 
     async def handle_request(self) -> None:
-        """
-        Increment the active token's usage counter and swap tokens if a threshold is reached.
-        """
+        """Increment the active token's usage counter and swap tokens if a threshold is reached."""
         if not self.active_token:
             return await self.swap_token()
 
@@ -127,9 +109,8 @@ class LoadBalance(YTRatelimit):
             self.active_token.requested_times = 0
             swapped_token = await self.swap_token()
             if swapped_token is None:
-                return self.node._logger.warning(
-                    "No available token found after swapping."
-                )
+                return self.node._logger.warning("No available token found after swapping.")
+        return None
 
 
 STRATEGY = {"LoadBalance": LoadBalance}

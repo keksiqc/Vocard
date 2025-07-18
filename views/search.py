@@ -1,4 +1,5 @@
-"""MIT License
+"""
+MIT License.
 
 Copyright (c) 2023 - present Vocard Development
 
@@ -23,9 +24,12 @@ SOFTWARE.
 
 from __future__ import annotations
 
+import builtins
+import contextlib
+from typing import TYPE_CHECKING
+
 import discord
 
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from voicelink import Track
@@ -65,13 +69,11 @@ class SearchView(discord.ui.View):
         self.values: list[str] = None
         self.add_item(SearchDropdown(tracks, texts))
 
-    async def on_error(self, error, item, interaction):
+    async def on_error(self, error, item, interaction) -> None:
         return
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await self.response.edit(view=self)
-        except:
-            pass
