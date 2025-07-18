@@ -2,9 +2,11 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: 
+      - main
     paths-ignore:
         - '**.md'
+  workflow_dispatch:
 
 jobs:
   build:
