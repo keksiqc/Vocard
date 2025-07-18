@@ -3,6 +3,10 @@ name = "vocard"
 version = "0.1.0"
 description = "Vocard is a simple music bot."
 readme = "README.md"
+authors = [
+    { name="ChocoMeow" },
+    { name="Keksi", email="hello@keksi.dev" }
+]
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp==3.11.12",
