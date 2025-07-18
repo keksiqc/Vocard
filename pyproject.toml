@@ -29,6 +29,7 @@ dev = [
 ]
 
 [tool.poe.tasks]
+pre-commit = "uv run pre-commit"
 start = "uv run python -u main.py"
 lint = "uv run ruff check ."
 fmt = "uv run ruff format ."
