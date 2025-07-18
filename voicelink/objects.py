@@ -28,18 +28,16 @@ from discord import Member
 from tldextract import extract
 
 from .enums import SearchType
-from function import (
-    get_source,
-    time as ctime
-)
+from function import get_source, time as ctime
 
 from .transformer import encode
 
-YOUTUBE_REGEX = re.compile(r'(https?://)?(www\.)?youtube\.(com|nl)/watch\?v=([-\w]+)')
+YOUTUBE_REGEX = re.compile(r"(https?://)?(www\.)?youtube\.(com|nl)/watch\?v=([-\w]+)")
+
 
 class Track:
     """The base track object. Returns critical track information needed for parsing by Lavalink.
-       You can also pass in commands.Context to get a discord.py Context object in your track.
+    You can also pass in commands.Context to get a discord.py Context object in your track.
     """
 
     __slots__ = (
@@ -58,7 +56,7 @@ class Track:
         "is_stream",
         "is_seekable",
         "position",
-        "end_time"
+        "end_time",
     )
 
     def __init__(
@@ -75,17 +73,21 @@ class Track:
         self.identifier: str = info.get("identifier")
         self.title: str = info.get("title", "Unknown")
         self.author: str = info.get("author", "Unknown")
-        self.uri: str = info.get("uri", "https://discord.com/application-directory/605618911471468554")
+        self.uri: str = info.get(
+            "uri", "https://discord.com/application-directory/605618911471468554"
+        )
         self.source: str = info.get("sourceName", extract(self.uri).domain)
         self._search_type: SearchType = search_type
 
         self.thumbnail: str = info.get("artworkUrl")
         if not self.thumbnail and YOUTUBE_REGEX.match(self.uri):
-            self.thumbnail = f"https://img.youtube.com/vi/{self.identifier}/maxresdefault.jpg"
-        
+            self.thumbnail = (
+                f"https://img.youtube.com/vi/{self.identifier}/maxresdefault.jpg"
+            )
+
         self.emoji: str = get_source(self.source, "emoji")
         self.length: float = info.get("length")
-        
+
         self.requester: Member = requester
         self.is_stream: bool = info.get("isStream", False)
         self.is_seekable: bool = info.get("isSeekable", True)
@@ -109,33 +111,25 @@ class Track:
     def track_id(self) -> str:
         if not self._track_id:
             self._track_id = encode(self.info)
-        
+
         return self._track_id
-    
+
     @property
     def formatted_length(self) -> str:
         return ctime(self.length)
-    
+
     @property
     def data(self) -> dict:
-        return {
-            "track_id": self.track_id,
-            "requester_id": self.requester.id
-        }
-    
+        return {"track_id": self.track_id, "requester_id": self.requester.id}
+
+
 class Playlist:
     """The base playlist object.
-       Returns critical playlist information needed for parsing by Lavalink.
-       You can also pass in commands.Context to get a discord.py Context object in your tracks.
+    Returns critical playlist information needed for parsing by Lavalink.
+    You can also pass in commands.Context to get a discord.py Context object in your tracks.
     """
 
-    __slots__ = (
-        "playlist_info",
-        "name",
-        "thumbnail",
-        "uri",
-        "tracks"
-    )
+    __slots__ = ("playlist_info", "name", "thumbnail", "uri", "tracks")
 
     def __init__(
         self,
@@ -148,7 +142,7 @@ class Playlist:
         self.name: str = playlist_info.get("name")
         self.thumbnail: str = None
         self.uri: str = None
-        
+
         self.tracks = [
             Track(track_id=track["encoded"], info=track["info"], requester=requester)
             for track in tracks

@@ -35,8 +35,9 @@ __all__ = [
     "NodeInfoVersion",
     "NodeInfo",
     "Plugin",
-    "Ping"
+    "Ping",
 ]
+
 
 class ExponentialBackoff:
     """
@@ -60,12 +61,11 @@ class ExponentialBackoff:
     """
 
     def __init__(self, base: int = 1, *, integral: bool = False) -> None:
-
         self._base = base
 
         self._exp = 0
         self._max = 10
-        self._reset_time = base * 2 ** 11
+        self._reset_time = base * 2**11
         self._last_invocation = time.monotonic()
 
         rand = random.Random()
@@ -74,7 +74,6 @@ class ExponentialBackoff:
         self._randfunc = rand.randrange if integral else rand.uniform
 
     def delay(self) -> float:
-
         invocation = time.monotonic()
         interval = invocation - self._last_invocation
         self._last_invocation = invocation
@@ -83,16 +82,15 @@ class ExponentialBackoff:
             self._exp = 0
 
         self._exp = min(self._exp + 1, self._max)
-        return self._randfunc(0, self._base * 2 ** self._exp)
+        return self._randfunc(0, self._base * 2**self._exp)
 
 
 class NodeStats:
     """The base class for the node stats object.
-       Gives critical information on the node, which is updated every minute.
+    Gives critical information on the node, which is updated every minute.
     """
 
     def __init__(self, data: Dict) -> None:
-
         memory: Dict = data.get("memory")
         self.used: int = memory.get("used")
         self.free: int = memory.get("free")
@@ -111,10 +109,12 @@ class NodeStats:
     def __repr__(self) -> str:
         return f"<Voicelink.NodeStats total_players={self.players_total!r} playing_active={self.players_active!r}>"
 
+
 class NodeInfoVersion:
     """The base class for the node info object.
-       Gives version information on the node.
+    Gives version information on the node.
     """
+
     def __init__(self, data: Dict) -> None:
         self.semver: str = data.get("semver")
         self.major: int = data.get("major")
@@ -123,24 +123,31 @@ class NodeInfoVersion:
         self.pre_release: Optional[str] = data.get("preRelease")
         self.build: Optional[str] = data.get("build")
 
+
 class NodeInfo:
     """The base class for the node info object.
-       Gives basic information on the node.
+    Gives basic information on the node.
     """
+
     def __init__(self, data: Dict) -> None:
         self.version: NodeInfoVersion = NodeInfoVersion(data.get("version"))
         self.build_time: int = data.get("buildTime")
         self.jvm: str = data.get("jvm")
         self.lavaplayer: str = data.get("lavaplayer")
-        self.plugins: Optional[Dict[str, Plugin]] = [Plugin(plugin_data) for plugin_data in data.get("plugins")]
+        self.plugins: Optional[Dict[str, Plugin]] = [
+            Plugin(plugin_data) for plugin_data in data.get("plugins")
+        ]
+
 
 class Plugin:
     """The base class for the plugin object.
-       Gives basic information on the plugin.
+    Gives basic information on the plugin.
     """
+
     def __init__(self, data: Dict) -> None:
         self.name: str = data.get("name")
         self.version: str = data.get("version")
+
 
 class Ping:
     # Thanks to https://github.com/zhengxiaowai/tcping for the nice ping impl
@@ -169,7 +176,6 @@ class Ping:
         def close(self):
             self._s.close()
 
-
     class Timer(object):
         def __init__(self):
             self._start = 0
@@ -197,10 +203,10 @@ class Ping:
 
     def get_ping(self):
         s = self._create_socket(socket.AF_INET, socket.SOCK_STREAM)
-     
+
         cost_time = self.timer.cost(
-            (s.connect, s.shutdown),
-            ((self._host, self._port), None))
+            (s.connect, s.shutdown), ((self._host, self._port), None)
+        )
         s_runtime = 1000 * (cost_time)
 
         return s_runtime

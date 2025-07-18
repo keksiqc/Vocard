@@ -22,7 +22,7 @@ SOFTWARE.
 """
 
 __version__ = "1.4"
-__author__ = 'Vocard Development, ChocoMeow'
+__author__ = "Vocard Development, ChocoMeow"
 __license__ = "MIT"
 __copyright__ = "Copyright 2023 - present (c) Vocard Development, ChocoMeow"
 

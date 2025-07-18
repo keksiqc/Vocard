@@ -41,11 +41,13 @@ VOCARD_URL = "https://github.com/ChocoMeow/Vocard/archive/"
 MIGRATION_SCRIPT_URL = f"https://raw.githubusercontent.com/ChocoMeow/Vocard-Magration/main/{__version__}.py"
 IGNORE_FILES = ["settings.json", "logs", "last-session.json"]
 
+
 class bcolors:
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    OKGREEN = '\033[92m'
-    ENDC = '\033[0m'
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    OKGREEN = "\033[92m"
+    ENDC = "\033[0m"
+
 
 def check_version(with_msg=False):
     """Check for the latest version of the project.
@@ -60,12 +62,13 @@ def check_version(with_msg=False):
     latest_version = response.json().get("name", __version__)
     if with_msg:
         msg = (
-            f"{bcolors.OKGREEN}Your bot is up-to-date! - {latest_version}{bcolors.ENDC}" 
+            f"{bcolors.OKGREEN}Your bot is up-to-date! - {latest_version}{bcolors.ENDC}"
             if latest_version == __version__
             else f"{bcolors.WARNING}Your bot is not up-to-date! The latest version is {latest_version} and you are currently running version {__version__}\nRun `{PYTHON_CMD_NAME} update.py -l` to update your bot!{bcolors.ENDC}"
         )
         print(msg)
     return latest_version
+
 
 def download_file(version=None):
     """Download the latest version of the project.
@@ -85,6 +88,7 @@ def download_file(version=None):
     print("Download Completed")
     return response
 
+
 def install(response, version):
     """Install the downloaded version of the project.
 
@@ -99,7 +103,7 @@ def install(response, version):
         "is irreversible, so it's important to double-check that you're making the \n"
         f"right decision. {bcolors.ENDC} Continue with caution? (Y/n) "
     )
-        
+
     if user_input.lower() in ["y", "yes"]:
         print("Installing ...")
         zfile = zipfile.ZipFile(BytesIO(response.content))
@@ -119,11 +123,16 @@ def install(response, version):
                 else:
                     os.remove(filename_path)
             for filename in os.listdir(source_dir):
-                shutil.move(os.path.join(source_dir, filename), os.path.join(ROOT_DIR, filename))
+                shutil.move(
+                    os.path.join(source_dir, filename), os.path.join(ROOT_DIR, filename)
+                )
             os.rmdir(source_dir)
-        print(f"{bcolors.OKGREEN}Version {version} installed Successfully! Run `{PYTHON_CMD_NAME} main.py` to start your bot{bcolors.ENDC}")
+        print(
+            f"{bcolors.OKGREEN}Version {version} installed Successfully! Run `{PYTHON_CMD_NAME} main.py` to start your bot{bcolors.ENDC}"
+        )
     else:
         print("Update canceled!")
+
 
 def run_migration():
     """Download, execute, and remove the migration script."""
@@ -138,7 +147,9 @@ def run_migration():
     print("Downloading migration script...")
     response = requests.get(MIGRATION_SCRIPT_URL)
     if response.status_code != 200:
-        print(f"{bcolors.FAIL}Failed to download migration script. Status code: {response.status_code}{bcolors.ENDC}")
+        print(
+            f"{bcolors.FAIL}Failed to download migration script. Status code: {response.status_code}{bcolors.ENDC}"
+        )
         exit(1)
 
     migration_filename = "temp_migration.py"
@@ -156,15 +167,41 @@ def run_migration():
             os.remove(migration_filename)
             print("Temporary migration script deleted.")
 
+
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Update and migration script for Vocard.')
-    parser.add_argument('-c', '--check', action='store_true', help='Check the current version of the Vocard')
-    parser.add_argument('-v', '--version', type=str, help='Install the specified version of the Vocard')
-    parser.add_argument('-l', '--latest', action='store_true', help='Install the latest version of the Vocard from Github')
-    parser.add_argument('-b', '--beta', action='store_true', help='Install the beta version of the Vocard from Github')
-    parser.add_argument('-m', '--migration', action='store_true', help='Download and run the migration script from Github')
+    parser = argparse.ArgumentParser(
+        description="Update and migration script for Vocard."
+    )
+    parser.add_argument(
+        "-c",
+        "--check",
+        action="store_true",
+        help="Check the current version of the Vocard",
+    )
+    parser.add_argument(
+        "-v", "--version", type=str, help="Install the specified version of the Vocard"
+    )
+    parser.add_argument(
+        "-l",
+        "--latest",
+        action="store_true",
+        help="Install the latest version of the Vocard from Github",
+    )
+    parser.add_argument(
+        "-b",
+        "--beta",
+        action="store_true",
+        help="Install the beta version of the Vocard from Github",
+    )
+    parser.add_argument(
+        "-m",
+        "--migration",
+        action="store_true",
+        help="Download and run the migration script from Github",
+    )
     return parser.parse_args()
+
 
 def main():
     """Main function."""
@@ -172,25 +209,28 @@ def main():
 
     if args.check:
         check_version(with_msg=True)
-        
+
     elif args.version:
         version = args.version
         response = download_file(version)
         install(response, version)
-        
+
     elif args.latest:
         response = download_file()
         version = check_version()
         install(response, version)
-        
+
     elif args.beta:
         response = download_file("refs/heads/beta")
         install(response, "beta")
-        
+
     elif args.migration:
         run_migration()
     else:
-        print(f"{bcolors.FAIL}No arguments provided. Run `{PYTHON_CMD_NAME} update.py -h` for help.{bcolors.ENDC}")
+        print(
+            f"{bcolors.FAIL}No arguments provided. Run `{PYTHON_CMD_NAME} update.py -h` for help.{bcolors.ENDC}"
+        )
+
 
 if __name__ == "__main__":
     main()

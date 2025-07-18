@@ -24,12 +24,7 @@ SOFTWARE.
 import discord
 import voicelink
 
-from function import (
-    send,
-    get_lang,
-    get_aliases,
-    cooldown_check
-)
+from function import send, get_lang, get_aliases, cooldown_check
 from discord import app_commands
 from discord.ext import commands
 
@@ -43,22 +38,34 @@ async def check_access(ctx: commands.Context):
     if ctx.author not in player.channel.members:
         if not ctx.author.guild_permissions.manage_guild:
             text = await get_lang(ctx.guild.id, "notInChannel")
-            raise voicelink.exceptions.VoicelinkException(text.format(ctx.author.mention, player.channel.mention))
+            raise voicelink.exceptions.VoicelinkException(
+                text.format(ctx.author.mention, player.channel.mention)
+            )
 
     return player
+
 
 class Effect(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.description = "This category is only available to DJ on this server. (You can setdj on your server by /settings setdj <DJ ROLE>)"
 
-    async def effect_autocomplete(self, interaction: discord.Interaction, current: str) -> list:
+    async def effect_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> list:
         player: voicelink.Player = interaction.guild.voice_client
         if not player:
             return []
         if current:
-            return [app_commands.Choice(name=effect.tag, value=effect.tag) for effect in player.filters.get_filters() if current in effect.tag]
-        return [app_commands.Choice(name=effect.tag, value=effect.tag) for effect in player.filters.get_filters()]
+            return [
+                app_commands.Choice(name=effect.tag, value=effect.tag)
+                for effect in player.filters.get_filters()
+                if current in effect.tag
+            ]
+        return [
+            app_commands.Choice(name=effect.tag, value=effect.tag)
+            for effect in player.filters.get_filters()
+        ]
 
     @commands.hybrid_command(name="speed", aliases=get_aliases("speed"))
     @app_commands.describe(value="The value to set the speed to. Default is `1.0`")
@@ -79,27 +86,45 @@ class Effect(commands.Cog):
         level="The level of the karaoke. Default is `1.0`",
         monolevel="The monolevel of the karaoke. Default is `1.0`",
         filterband="The filter band of the karaoke. Default is `220.0`",
-        filterwidth="The filter band of the karaoke. Default is `100.0`"
+        filterwidth="The filter band of the karaoke. Default is `100.0`",
     )
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def karaoke(self, ctx: commands.Context, level: commands.Range[float, 0, 2] = 1.0, monolevel: commands.Range[float, 0, 2] = 1.0, filterband: commands.Range[float, 100, 300] = 220.0, filterwidth: commands.Range[float, 50, 150] = 100.0) -> None:
+    async def karaoke(
+        self,
+        ctx: commands.Context,
+        level: commands.Range[float, 0, 2] = 1.0,
+        monolevel: commands.Range[float, 0, 2] = 1.0,
+        filterband: commands.Range[float, 100, 300] = 220.0,
+        filterwidth: commands.Range[float, 50, 150] = 100.0,
+    ) -> None:
         "Uses equalization to eliminate part of a band, usually targeting vocals."
         player = await check_access(ctx)
 
         if player.filters.has_filter(filter_tag="karaoke"):
             player.filters.remove_filter(filter_tag="karaoke")
 
-        effect = voicelink.Karaoke(tag="karaoke", level=level, mono_level=monolevel, filter_band=filterband, filter_width=filterwidth)
+        effect = voicelink.Karaoke(
+            tag="karaoke",
+            level=level,
+            mono_level=monolevel,
+            filter_band=filterband,
+            filter_width=filterwidth,
+        )
         await player.add_filter(effect, ctx.author)
         await send(ctx, "addEffect", effect.tag)
 
     @commands.hybrid_command(name="tremolo", aliases=get_aliases("tremolo"))
     @app_commands.describe(
         frequency="The frequency of the tremolo. Default is `2.0`",
-        depth="The depth of the tremolo. Default is `0.5`"
+        depth="The depth of the tremolo. Default is `0.5`",
     )
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def tremolo(self, ctx: commands.Context, frequency: commands.Range[float, 0, 10] = 2.0, depth: commands.Range[float, 0, 1] = 0.5) -> None:
+    async def tremolo(
+        self,
+        ctx: commands.Context,
+        frequency: commands.Range[float, 0, 10] = 2.0,
+        depth: commands.Range[float, 0, 1] = 0.5,
+    ) -> None:
         "Uses amplification to create a shuddering effect, where the volume quickly oscillates."
         player = await check_access(ctx)
 
@@ -113,10 +138,15 @@ class Effect(commands.Cog):
     @commands.hybrid_command(name="vibrato", aliases=get_aliases("vibrato"))
     @app_commands.describe(
         frequency="The frequency of the vibrato. Default is `2.0`",
-        depth="The Depth of the vibrato. Default is `0.5`"
+        depth="The Depth of the vibrato. Default is `0.5`",
     )
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def vibrato(self, ctx: commands.Context, frequency: commands.Range[float, 0, 14] = 2.0, depth: commands.Range[float, 0, 1] = 0.5) -> None:
+    async def vibrato(
+        self,
+        ctx: commands.Context,
+        frequency: commands.Range[float, 0, 14] = 2.0,
+        depth: commands.Range[float, 0, 1] = 0.5,
+    ) -> None:
         "Similar to tremolo. While tremolo oscillates the volume, vibrato oscillates the pitch."
         player = await check_access(ctx)
 
@@ -130,7 +160,9 @@ class Effect(commands.Cog):
     @commands.hybrid_command(name="rotation", aliases=get_aliases("rotation"))
     @app_commands.describe(hertz="The hertz of the rotation. Default is `0.2`")
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def rotation(self, ctx: commands.Context, hertz: commands.Range[float, 0, 2] = 0.2) -> None:
+    async def rotation(
+        self, ctx: commands.Context, hertz: commands.Range[float, 0, 2] = 0.2
+    ) -> None:
         "Rotates the sound around the stereo channels/user headphones aka Audio Panning."
         player = await check_access(ctx)
 
@@ -150,14 +182,26 @@ class Effect(commands.Cog):
         if player.filters.has_filter(filter_tag="distortion"):
             player.filters.remove_filter(filter_tag="distortion")
 
-        effect = voicelink.Distortion(tag="distortion", sin_offset=0.0, sin_scale=1.0, cos_offset=0.0, cos_scale=1.0, tan_offset=0.0, tan_scale=1.0, offset=0.0, scale=1.0)
+        effect = voicelink.Distortion(
+            tag="distortion",
+            sin_offset=0.0,
+            sin_scale=1.0,
+            cos_offset=0.0,
+            cos_scale=1.0,
+            tan_offset=0.0,
+            tan_scale=1.0,
+            offset=0.0,
+            scale=1.0,
+        )
         await player.add_filter(effect, ctx.author)
         await send(ctx, "addEffect", effect.tag)
 
     @commands.hybrid_command(name="lowpass", aliases=get_aliases("lowpass"))
     @app_commands.describe(smoothing="The level of the lowPass. Default is `20.0`")
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def lowpass(self, ctx: commands.Context, smoothing: commands.Range[float, 10, 30] = 20.0) -> None:
+    async def lowpass(
+        self, ctx: commands.Context, smoothing: commands.Range[float, 10, 30] = 20.0
+    ) -> None:
         "Filter which supresses higher frequencies and allows lower frequencies to pass."
         player = await check_access(ctx)
 
@@ -173,17 +217,30 @@ class Effect(commands.Cog):
         left_to_left="Sounds from left to left. Default is `1.0`",
         right_to_right="Sounds from right to right. Default is `1.0`",
         left_to_right="Sounds from left to right. Default is `0.0`",
-        right_to_left="Sounds from right to left. Default is `0.0`"
+        right_to_left="Sounds from right to left. Default is `0.0`",
     )
     @commands.dynamic_cooldown(cooldown_check, commands.BucketType.guild)
-    async def channelmix(self, ctx: commands.Context, left_to_left: commands.Range[float, 0, 1] = 1.0, right_to_right: commands.Range[float, 0, 1] = 1.0, left_to_right: commands.Range[float, 0, 1] = 0.0, right_to_left: commands.Range[float, 0, 1] = 0.0) -> None:
+    async def channelmix(
+        self,
+        ctx: commands.Context,
+        left_to_left: commands.Range[float, 0, 1] = 1.0,
+        right_to_right: commands.Range[float, 0, 1] = 1.0,
+        left_to_right: commands.Range[float, 0, 1] = 0.0,
+        right_to_left: commands.Range[float, 0, 1] = 0.0,
+    ) -> None:
         "Filter which manually adjusts the panning of the audio."
         player = await check_access(ctx)
 
         if player.filters.has_filter(filter_tag="channelmix"):
             player.filters.remove_filter(filter_tag="channelmix")
 
-        effect = voicelink.ChannelMix(tag="channelmix", left_to_left=left_to_left, right_to_right=right_to_right, left_to_right=left_to_right, right_to_left=right_to_left)
+        effect = voicelink.ChannelMix(
+            tag="channelmix",
+            left_to_left=left_to_left,
+            right_to_right=right_to_right,
+            left_to_right=left_to_right,
+            right_to_left=right_to_left,
+        )
         await player.add_filter(effect, ctx.author)
         await send(ctx, "addEffect", effect.tag)
 
@@ -229,8 +286,9 @@ class Effect(commands.Cog):
             await player.remove_filter(effect)
         else:
             await player.reset_filter()
-            
+
         await send(ctx, "clearEffect")
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Effect(bot))

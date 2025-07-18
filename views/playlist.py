@@ -31,6 +31,7 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from voicelink import Track
 
+
 class Select_playlist(discord.ui.Select):
     def __init__(self, results):
         self.view: PlaylistView
@@ -38,31 +39,41 @@ class Select_playlist(discord.ui.Select):
         super().__init__(
             placeholder="Select a playlist to view ..",
             custom_id="selector",
-            options=[discord.SelectOption(emoji='🌎', label='All Playlist')] + 
-                [
-                    discord.SelectOption(emoji=playlist['emoji'], label=f'{index}. {playlist["name"]}', description=f"{playlist['time']} · {playlist['type']}") 
-                    for index, playlist in enumerate(results, start=1) if playlist['type'] != 'error'
-                ]
+            options=[discord.SelectOption(emoji="🌎", label="All Playlist")]
+            + [
+                discord.SelectOption(
+                    emoji=playlist["emoji"],
+                    label=f"{index}. {playlist['name']}",
+                    description=f"{playlist['time']} · {playlist['type']}",
+                )
+                for index, playlist in enumerate(results, start=1)
+                if playlist["type"] != "error"
+            ],
         )
-    
+
     async def callback(self, interaction: discord.Interaction) -> None:
-        if self.values[0] == 'All Playlist':
+        if self.values[0] == "All Playlist":
             self.view.current = None
             self.view.toggle_btn(True)
-            return await interaction.response.edit_message(embed=self.view.viewEmbed, view=self.view)
-        
+            return await interaction.response.edit_message(
+                embed=self.view.viewEmbed, view=self.view
+            )
+
         self.view.current = self.view.results[int(self.values[0].split(". ")[0]) - 1]
-        self.view.page = ceil(len(self.view.current['tracks']) / 7)
+        self.view.page = ceil(len(self.view.current["tracks"]) / 7)
         self.view.current_page = 1
         self.view.toggle_btn(False)
-        await interaction.response.edit_message(embed=await self.view.build_embed(), view=self.view)
+        await interaction.response.edit_message(
+            embed=await self.view.build_embed(), view=self.view
+        )
+
 
 class PlaylistView(discord.ui.View):
     def __init__(
-            self,
-            viewEmbed: discord.Embed,
-            results: list[dict[str, Any]],
-            author: discord.Message
+        self,
+        viewEmbed: discord.Embed,
+        results: list[dict[str, Any]],
+        author: discord.Message,
     ) -> None:
         super().__init__(timeout=60)
 
@@ -79,7 +90,7 @@ class PlaylistView(discord.ui.View):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
-    
+
     async def on_error(self, error, item, interaction) -> None:
         return
 
@@ -87,31 +98,75 @@ class PlaylistView(discord.ui.View):
         for child in self.children:
             if child.custom_id not in ("delete", "selector"):
                 child.disabled = action
-        
+
     async def build_embed(self) -> discord.Embed:
         offset: int = self.current_page * 7
-        tracks: list[Track] = self.current['tracks'][(offset-7):offset]
-        texts = await func.get_lang(self.author.guild.id, "playlistView", "playlistViewDesc", "settingsPermTitle", "playlistViewPermsValue", "playlistViewPermsValue2", "playlistViewTrack", "playlistNoTrack", "playlistViewPage")
+        tracks: list[Track] = self.current["tracks"][(offset - 7) : offset]
+        texts = await func.get_lang(
+            self.author.guild.id,
+            "playlistView",
+            "playlistViewDesc",
+            "settingsPermTitle",
+            "playlistViewPermsValue",
+            "playlistViewPermsValue2",
+            "playlistViewTrack",
+            "playlistNoTrack",
+            "playlistViewPage",
+        )
 
         embed = discord.Embed(title=texts[0], color=func.settings.embed_color)
-        embed.description = texts[1].format(self.current['name'], self.current['id'], len(self.current['tracks']), owner if (owner := self.current.get('owner')) else f"{self.author.id} (You)", self.current['type']) + "\n"
-        
-        perms = self.current['perms']
-        if self.current['type'] == 'share':
-            embed.description += texts[2] + "\n" + texts[3].format('✓' if 'write' in perms and self.author.id in perms['write'] else '✘', '✓' if 'remove' in perms and self.author.id in perms['remove'] else '✘')
+        embed.description = (
+            texts[1].format(
+                self.current["name"],
+                self.current["id"],
+                len(self.current["tracks"]),
+                owner
+                if (owner := self.current.get("owner"))
+                else f"{self.author.id} (You)",
+                self.current["type"],
+            )
+            + "\n"
+        )
+
+        perms = self.current["perms"]
+        if self.current["type"] == "share":
+            embed.description += (
+                texts[2]
+                + "\n"
+                + texts[3].format(
+                    "✓"
+                    if "write" in perms and self.author.id in perms["write"]
+                    else "✘",
+                    "✓"
+                    if "remove" in perms and self.author.id in perms["remove"]
+                    else "✘",
+                )
+            )
         else:
-            embed.description += texts[2] + "\n" + texts[4].format(', '.join(f'<@{user}>' for user in perms['read']))
+            embed.description += (
+                texts[2]
+                + "\n"
+                + texts[4].format(", ".join(f"<@{user}>" for user in perms["read"]))
+            )
 
         embed.description += f"\n\n**{texts[5]}:**\n"
         if tracks:
-            if self.current.get("type") == "playlist":    
-                embed.description += "\n".join(f"{func.get_source(track['sourceName'], 'emoji')} `{index:>2}.` `[{func.time(track['length'])}]` [{func.truncate_string(track['title'])}]({track['uri']})" for index, track in enumerate(tracks, start=offset - 6))
+            if self.current.get("type") == "playlist":
+                embed.description += "\n".join(
+                    f"{func.get_source(track['sourceName'], 'emoji')} `{index:>2}.` `[{func.time(track['length'])}]` [{func.truncate_string(track['title'])}]({track['uri']})"
+                    for index, track in enumerate(tracks, start=offset - 6)
+                )
             else:
-                embed.description += '\n'.join(f"{func.get_source(extract(track.info['uri']).domain, 'emoji')} `{index:>2}.` `[{func.time(track.length)}]` [{func.truncate_string(track.title)}]({track.uri})" for index, track in enumerate(tracks, start=offset - 6))
+                embed.description += "\n".join(
+                    f"{func.get_source(extract(track.info['uri']).domain, 'emoji')} `{index:>2}.` `[{func.time(track.length)}]` [{func.truncate_string(track.title)}]({track.uri})"
+                    for index, track in enumerate(tracks, start=offset - 6)
+                )
         else:
-            embed.description += texts[6].format(self.current['name'])
+            embed.description += texts[6].format(self.current["name"])
 
-        embed.set_footer(text=texts[7].format(self.current_page, self.page, self.current['time']))
+        embed.set_footer(
+            text=texts[7].format(self.current_page, self.page, self.current["time"])
+        )
         return embed
 
     async def on_timeout(self) -> None:
@@ -122,43 +177,61 @@ class PlaylistView(discord.ui.View):
         except:
             pass
 
-    @discord.ui.button(label='<<', style=discord.ButtonStyle.grey, disabled=True)
-    async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    @discord.ui.button(label="<<", style=discord.ButtonStyle.grey, disabled=True)
+    async def fast_back_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         if not self.current:
-            return 
+            return
         if self.current_page != 1:
             self.current_page = 1
-            return await interaction.response.edit_message(embed=await self.build_embed())
+            return await interaction.response.edit_message(
+                embed=await self.build_embed()
+            )
         await interaction.response.defer()
 
-    @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple, disabled=True)
-    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    @discord.ui.button(label="Back", style=discord.ButtonStyle.blurple, disabled=True)
+    async def back_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         if not self.current:
-            return 
+            return
         if self.current_page > 1:
             self.current_page -= 1
-            return await interaction.response.edit_message(embed=await self.build_embed())
+            return await interaction.response.edit_message(
+                embed=await self.build_embed()
+            )
         await interaction.response.defer()
 
-    @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple, disabled=True)
-    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple, disabled=True)
+    async def next_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         if not self.current:
-            return 
+            return
         if self.current_page < self.page:
             self.current_page += 1
-            return await interaction.response.edit_message(embed=await self.build_embed())
+            return await interaction.response.edit_message(
+                embed=await self.build_embed()
+            )
         await interaction.response.defer()
 
-    @discord.ui.button(label='>>', style=discord.ButtonStyle.grey, disabled=True)
-    async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    @discord.ui.button(label=">>", style=discord.ButtonStyle.grey, disabled=True)
+    async def fast_next_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         if not self.current:
-            return 
+            return
         if self.current_page != self.page:
             self.current_page = self.page
-            return await interaction.response.edit_message(embed=await self.build_embed())
+            return await interaction.response.edit_message(
+                embed=await self.build_embed()
+            )
         await interaction.response.defer()
 
-    @discord.ui.button(emoji='🗑️', custom_id="delete", style=discord.ButtonStyle.red)
-    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    @discord.ui.button(emoji="🗑️", custom_id="delete", style=discord.ButtonStyle.red)
+    async def stop_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         await self.response.delete()
         self.stop()

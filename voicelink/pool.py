@@ -34,9 +34,7 @@ from discord.ext.commands import Bot
 from typing import Dict, Optional, Union, List, Any, TYPE_CHECKING
 from urllib.parse import quote
 
-from . import (
-    __version__
-)
+from . import __version__
 
 from .enums import SearchType, NodeAlgorithm
 from .exceptions import (
@@ -45,7 +43,7 @@ from .exceptions import (
     NodeException,
     NodeNotAvailable,
     NoNodesAvailable,
-    TrackLoadError
+    TrackLoadError,
 )
 from .objects import Playlist, Track
 from .utils import ExponentialBackoff, NodeStats, NodeInfo, Ping
@@ -55,15 +53,14 @@ from .ratelimit import YTRatelimit, YTToken, STRATEGY
 if TYPE_CHECKING:
     from .player import Player
 
-URL_REGEX = re.compile(
-    r"https?://(?:www\.)?.+"
-)
+URL_REGEX = re.compile(r"https?://(?:www\.)?.+")
 
 NODE_VERSION = "v4"
 
+
 class Node:
-    """The base class for a node. 
-       This node object represents a Lavalink node.
+    """The base class for a node.
+    This node object represents a Lavalink node.
     """
 
     def __init__(
@@ -80,7 +77,7 @@ class Node:
         yt_ratelimit: dict = None,
         session: Optional[aiohttp.ClientSession] = None,
         resume_key: Optional[str] = None,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
     ):
         self._bot: Bot = bot
         self._host: str = host
@@ -92,8 +89,14 @@ class Node:
         self._secure: bool = secure
         self._logger: Optional[logging.Logger] = logger
 
-        self._websocket_uri: str = f"{'wss' if self._secure else 'ws'}://{self._host}:{self._port}/" + NODE_VERSION + "/websocket"
-        self._rest_uri: str = f"{'https' if self._secure else 'http'}://{self._host}:{self._port}"
+        self._websocket_uri: str = (
+            f"{'wss' if self._secure else 'ws'}://{self._host}:{self._port}/"
+            + NODE_VERSION
+            + "/websocket"
+        )
+        self._rest_uri: str = (
+            f"{'https' if self._secure else 'http'}://{self._host}:{self._port}"
+        )
 
         self._session: aiohttp.ClientSession = session or aiohttp.ClientSession()
         self._websocket: aiohttp.ClientWebSocketResponse = None
@@ -107,13 +110,17 @@ class Node:
             "Authorization": self._password,
             "User-Id": str(bot.user.id),
             "Client-Name": f"Voicelink/{__version__}",
-            'Resume-Key': self.resume_key
+            "Resume-Key": self.resume_key,
         }
 
         self._players: Dict[int, Player] = {}
         self._info: Optional[NodeInfo] = None
-        
-        self.yt_ratelimit: Optional[YTRatelimit] = STRATEGY.get(yt_ratelimit.get("strategy"))(self, yt_ratelimit) if yt_ratelimit else None
+
+        self.yt_ratelimit: Optional[YTRatelimit] = (
+            STRATEGY.get(yt_ratelimit.get("strategy"))(self, yt_ratelimit)
+            if yt_ratelimit
+            else None
+        )
 
         self._bot.add_listener(self._update_handler, "on_socket_response")
 
@@ -122,16 +129,15 @@ class Node:
             f"<Voicelink.node ws_uri={self._websocket_uri} rest_uri={self._rest_uri} "
             f"player_count={len(self._players)}>"
         )
-    
+
     def get_player(self, guild_id: int) -> Optional[Player]:
         """Takes a guild ID as a parameter. Returns a voicelink Player object."""
         return self._players.get(guild_id, None)
-    
+
     @property
     def is_connected(self) -> bool:
-        """"Property which returns whether this node is connected or not"""
+        """ "Property which returns whether this node is connected or not"""
         return self._websocket is not None and not self._websocket.closed
-
 
     @property
     def stats(self) -> NodeStats:
@@ -187,7 +193,7 @@ class Node:
                 await player.on_voice_state_update(data["d"])
             except KeyError:
                 return
-            
+
     async def _listen(self) -> None:
         backoff = ExponentialBackoff(base=7)
 
@@ -197,20 +203,22 @@ class Node:
 
                 if msg.type == aiohttp.WSMsgType.CLOSED:
                     self._available = False
-                    self._logger.warning(f"WebSocket closed for node [{self._identifier}]")
+                    self._logger.warning(
+                        f"WebSocket closed for node [{self._identifier}]"
+                    )
                     break
 
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     self._logger.error(f"WebSocket error for node [{self._identifier}]")
                     break
-                
+
                 self._bot.loop.create_task(self._handle_payload(msg.json()))
 
             except aiohttp.ClientConnectionError as e:
                 self._logger.error(f"Connection error: {e}")
                 self._available = False
                 break
-            
+
             except Exception as e:
                 self._logger.exception(f"Unexpected error: {e}")
                 self._available = False
@@ -218,7 +226,9 @@ class Node:
 
         while not self._available:
             retry = backoff.delay()
-            self._logger.info(f"Trying to reconnect node [{self._identifier}] in {round(retry)}s")
+            self._logger.info(
+                f"Trying to reconnect node [{self._identifier}] in {round(retry)}s"
+            )
             await asyncio.sleep(retry)
             try:
                 await self.connect()
@@ -246,20 +256,22 @@ class Node:
         elif op == "playerUpdate":
             await player._update_state(data)
 
-    async def send(self, method: RequestMethod, query: str, data: Union[dict, str] = {}) -> dict:
+    async def send(
+        self, method: RequestMethod, query: str, data: Union[dict, str] = {}
+    ) -> dict:
         if not self._available:
             raise NodeNotAvailable(f"The node '{self._identifier}' is unavailable.")
-        
+
         uri: str = f"{self._rest_uri}/{NODE_VERSION}/{query}"
         async with self._session.request(
             method=method.value,
             url=uri,
             headers={"Authorization": self._password},
-            json=data
+            json=data,
         ) as resp:
             if resp.status >= 300:
-                raise NodeException(f"Getting errors from Lavalink REST api")
-            
+                raise NodeException("Getting errors from Lavalink REST api")
+
             if method == RequestMethod.DELETE:
                 return await resp.json(content_type=None)
 
@@ -272,7 +284,7 @@ class Node:
             if self._available:
                 self._logger.info(f"Node [{self._identifier}] already connected.")
                 return
-            
+
             self._websocket = await self._session.ws_connect(
                 self._websocket_uri, headers=self._headers, heartbeat=self._heartbeat
             )
@@ -280,9 +292,9 @@ class Node:
             self._task = self._bot.loop.create_task(self._listen())
             self._available = True
             self._info = NodeInfo(await self.send(RequestMethod.GET, query="info"))
-            
+
             self._logger.info(f"Node [{self._identifier}] is connected!")
-        
+
         except aiohttp.ClientConnectorError:
             raise NodeConnectionFailure(
                 f"The connection to node '{self._identifier}' failed."
@@ -295,25 +307,25 @@ class Node:
             raise NodeConnectionFailure(
                 f"The URI for node '{self._identifier}' is invalid."
             )
-        
+
         if self.players:
             await self.reconnect()
 
         return self
-              
+
     async def disconnect(self, remove_from_pool: bool = False) -> None:
         """Disconnects a connected Lavalink node and removes it from the node pool.
-           This also destroys any players connected to the node.
+        This also destroys any players connected to the node.
         """
         for player in self.players.copy().values():
             await player.teardown()
-        
+
         await self._websocket.close()
         if remove_from_pool:
             del self._pool._nodes[self._identifier]
         self._available = False
         self._task.cancel()
-        
+
         self._logger.info(f"Node [{self._identifier}] is disconnected!")
 
     async def reconnect(self) -> None:
@@ -325,7 +337,10 @@ class Node:
                     await player._dispatch_voice_update(player._voice_state)
 
                 if player.current:
-                    await player.play(track=player.current, start=min(player._last_position, player.current.length))
+                    await player.play(
+                        track=player.current,
+                        start=min(player._last_position, player.current.length),
+                    )
 
                     if player.is_paused:
                         await player.set_pause(True)
@@ -333,11 +348,7 @@ class Node:
                 await player.teardown()
             await asyncio.sleep(2)
 
-    async def build_track(
-        self,
-        identifier: str,
-        requester: Member = None
-    ) -> Track:
+    async def build_track(self, identifier: str, requester: Member = None) -> Track:
         """
         Builds a track using a valid track identifier
 
@@ -345,7 +356,9 @@ class Node:
         Context object on the track it builds.
         """
 
-        data = await self.send(RequestMethod.GET, f"decodetrack?encodedTrack={identifier}")
+        data = await self.send(
+            RequestMethod.GET, f"decodetrack?encodedTrack={identifier}"
+        )
         return Track(track_id=identifier, info=data, requester=requester)
 
     async def get_tracks(
@@ -353,7 +366,7 @@ class Node:
         query: str,
         *,
         requester: Member,
-        search_type: SearchType = SearchType.YOUTUBE
+        search_type: SearchType = SearchType.YOUTUBE,
     ) -> Union[List[Track], Playlist]:
         """
         Fetches tracks from the node's REST api to parse into Lavalink.
@@ -362,16 +375,18 @@ class Node:
         Context object on any track you search.
         """
 
-        if not URL_REGEX.match(query) and ':' not in query:
+        if not URL_REGEX.match(query) and ":" not in query:
             query = f"{search_type}:{query}"
 
-        response: dict[str, Any] = await self.send(RequestMethod.GET, f"loadtracks?identifier={quote(query)}")
+        response: dict[str, Any] = await self.send(
+            RequestMethod.GET, f"loadtracks?identifier={quote(query)}"
+        )
         data = response.get("data")
         load_type = response.get("loadType")
 
         if not load_type:
             raise TrackLoadError("There was an error while trying to load this track.")
-        
+
         elif load_type == "empty":
             return None
 
@@ -379,15 +394,26 @@ class Node:
             raise TrackLoadError(f"{data['message']} [{data['severity']}]")
 
         elif load_type in ("playlist", "recommendations"):
-            return Playlist(playlist_info=data["info"], tracks=data["tracks"], requester=requester)
+            return Playlist(
+                playlist_info=data["info"], tracks=data["tracks"], requester=requester
+            )
 
         elif load_type == "search":
-            return [Track(track_id=track["encoded"], info=track["info"], requester=requester) for track in data]
+            return [
+                Track(
+                    track_id=track["encoded"], info=track["info"], requester=requester
+                )
+                for track in data
+            ]
 
         elif load_type == "track":
-            return [Track(track_id=data["encoded"], info=data["info"], requester=requester)]
+            return [
+                Track(track_id=data["encoded"], info=data["info"], requester=requester)
+            ]
 
-    async def get_recommendations(self, track: Track, limit: int = 20) -> List[Optional[Track]]:
+    async def get_recommendations(
+        self, track: Track, limit: int = 20
+    ) -> List[Optional[Track]]:
         query = ""
         if track.source == "youtube":
             query = f"https://www.youtube.com/watch?v={track.identifier}&list=RD{track.identifier}"
@@ -397,30 +423,31 @@ class Node:
 
         if not query:
             return []
-        
+
         tracks = await self.get_tracks(query=query, requester=self.bot.user)
         if isinstance(tracks, Playlist):
             tracks = tracks.tracks
 
         return tracks[:limit] if limit else tracks
-    
+
     async def update_refresh_yt_access_token(self, token: YTToken) -> dict:
         if not self._available:
             raise NodeNotAvailable(f"The node '{self._identifier}' is unavailable.")
-        
+
         uri: str = f"{self._rest_uri}/youtube"
         async with self._session.request(
             method="POST",
             url=uri,
             headers={"Authorization": self._password},
-            json={"refreshToken": token.token}
+            json={"refreshToken": token.token},
         ) as resp:
             if resp.status >= 300:
-                raise NodeException(f"Getting errors from Lavalink REST api")
+                raise NodeException("Getting errors from Lavalink REST api")
+
 
 class NodePool:
     """The base class for the node pool.
-       This holds all the nodes that are to be used by the bot.
+    This holds all the nodes that are to be used by the bot.
     """
 
     _nodes: Dict[str, Node] = {}
@@ -436,21 +463,21 @@ class NodePool:
     @property
     def node_count(self) -> Optional[Node]:
         return len(self._nodes.values())
-    
+
     @classmethod
     def get_best_node(cls, *, algorithm: NodeAlgorithm) -> Node:
         """Fetches the best node based on an NodeAlgorithm.
-         This option is preferred if you want to choose the best node
-         from a multi-node setup using either the node's latency
-         or the node's voice region.
-         Use NodeAlgorithm.BY_PING if you want to get the best node
-         based on the node's latency.
-         Use NodeAlgorithm.by_region if you want to get the best node
-         based on the node's voice region. This method will only work
-         if you set a voice region when you create a node.
-         Use NodeAlgorithm.BY_PLAYERS if you want to get the best node
-         based on how players it has. This method will return a node with
-         the least amount of players
+        This option is preferred if you want to choose the best node
+        from a multi-node setup using either the node's latency
+        or the node's voice region.
+        Use NodeAlgorithm.BY_PING if you want to get the best node
+        based on the node's latency.
+        Use NodeAlgorithm.by_region if you want to get the best node
+        based on the node's voice region. This method will only work
+        if you set a voice region when you create a node.
+        Use NodeAlgorithm.BY_PLAYERS if you want to get the best node
+        based on how players it has. This method will return a node with
+        the least amount of players
         """
         available_nodes = [node for node in cls._nodes.values() if node._available]
 
@@ -468,15 +495,15 @@ class NodePool:
     @classmethod
     def get_node(cls, *, identifier: str = None) -> Node:
         """Fetches a node from the node pool using it's identifier.
-           If no identifier is provided, it will choose a node at random.
+        If no identifier is provided, it will choose a node at random.
         """
 
-        available_nodes = { node
-            for _, node in cls._nodes.items() if node.is_connected
-        }
+        available_nodes = {node for _, node in cls._nodes.items() if node.is_connected}
 
         if identifier:
-            available_nodes = { node for node in available_nodes if node._identifier == identifier }
+            available_nodes = {
+                node for node in available_nodes if node._identifier == identifier
+            }
 
         if not available_nodes:
             raise NoNodesAvailable("There are no nodes available.")
@@ -498,20 +525,30 @@ class NodePool:
         yt_ratelimit: dict = None,
         session: Optional[aiohttp.ClientSession] = None,
         resume_key: Optional[str] = None,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
     ) -> Node:
-        """Creates a Node object to be then added into the node pool.
-        """
+        """Creates a Node object to be then added into the node pool."""
         if identifier in cls._nodes.keys():
-            raise NodeCreationError(f"A node with identifier '{identifier}' already exists.")
-        
+            raise NodeCreationError(
+                f"A node with identifier '{identifier}' already exists."
+            )
+
         if not logger:
             logger = logging.getLogger("voicelink")
-            
+
         node = Node(
-            pool=cls, bot=bot, host=host, port=port, password=password,
-            identifier=identifier, secure=secure, heartbeat=heartbeat, yt_ratelimit=yt_ratelimit,
-            session=session, resume_key=resume_key, logger=logger
+            pool=cls,
+            bot=bot,
+            host=host,
+            port=port,
+            password=password,
+            identifier=identifier,
+            secure=secure,
+            heartbeat=heartbeat,
+            yt_ratelimit=yt_ratelimit,
+            session=session,
+            resume_key=resume_key,
+            logger=logger,
         )
 
         await node.connect()

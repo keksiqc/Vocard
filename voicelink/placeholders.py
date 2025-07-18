@@ -34,13 +34,16 @@ if TYPE_CHECKING:
     from .player import Player
     from .objects import Track
 
+
 def ensure_track(func) -> callable:
     def wrapper(self: Placeholders, *args, **kwargs):
         current = self.get_current()
         if not current:
             return "None"
         return func(self, current, *args, **kwargs)
+
     return wrapper
+
 
 class Placeholders:
     def __init__(self, bot: Client, player: Player = None) -> None:
@@ -68,9 +71,9 @@ class Placeholders:
             "default_embed_color": self.default_embed_color,
             "bot_icon": self.bot_icon,
             "server_invite_link": func.settings.invite_link,
-            "invite_link": f"https://discord.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=2184260928&scope=bot%20applications.commands"
+            "invite_link": f"https://discord.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=2184260928&scope=bot%20applications.commands",
         }
-        
+
     def get_current(self) -> Track:
         return self.player.current if self.player else None
 
@@ -78,7 +81,7 @@ class Placeholders:
         if not self.player:
             return "None"
         return self.player.channel.name if self.player.channel else "None"
-    
+
     @ensure_track
     def track_name(self, track: Track) -> str:
         return track.title
@@ -86,59 +89,68 @@ class Placeholders:
     @ensure_track
     def track_url(self, track: Track) -> str:
         return track.uri
-    
+
     @ensure_track
     def track_author(self, track: Track) -> str:
         return track.author
 
     @ensure_track
     def track_duration(self, track: Track) -> str:
-        return self.player.get_msg("live") if track.is_stream else func.time(track.length)
-    
+        return (
+            self.player.get_msg("live") if track.is_stream else func.time(track.length)
+        )
+
     @ensure_track
     def track_requester_id(self, track: Track) -> str:
         return str(track.requester.id if track.requester else self.bot.user.id)
-    
+
     @ensure_track
     def track_requester_name(self, track: Track) -> str:
         return track.requester.name if track.requester else self.bot.user.display_name
-    
+
     @ensure_track
     def track_requester_mention(self, track: Track) -> str:
         return f"<@{track.requester.id if track.requester else self.bot.user.id}>"
-    
+
     @ensure_track
     def track_requester_avatar(self, track: Track) -> str:
-        return track.requester.display_avatar.url if track.requester else self.bot.user.display_avatar.url
-    
+        return (
+            track.requester.display_avatar.url
+            if track.requester
+            else self.bot.user.display_avatar.url
+        )
+
     @ensure_track
     def track_color(self, track: Track) -> int:
         return int(func.get_source(track.source, "color"), 16)
-    
+
     @ensure_track
     def track_source_name(self, track: Track) -> str:
         return track.source
-    
+
     @ensure_track
     def track_source_emoji(self, track: Track) -> str:
         return track.emoji
-    
+
     def track_thumbnail(self) -> str:
         if not self.player or not self.player.current:
             return "https://i.imgur.com/dIFBwU7.png"
-        
-        return self.player.current.thumbnail or "https://cdn.discordapp.com/attachments/674788144931012638/823086668445384704/eq-dribbble.gif"
+
+        return (
+            self.player.current.thumbnail
+            or "https://cdn.discordapp.com/attachments/674788144931012638/823086668445384704/eq-dribbble.gif"
+        )
 
     def queue_length(self) -> str:
         return str(self.player.queue.count) if self.player else "0"
-    
+
     def dj(self) -> str:
         if not self.player:
             return self.bot.user.mention
-        
+
         if dj_id := self.player.settings.get("dj"):
             return f"<@&{dj_id}>"
-        
+
         return self.player.dj.mention
 
     def volume(self) -> int:
@@ -151,10 +163,15 @@ class Placeholders:
         return func.settings.embed_color
 
     def bot_icon(self) -> str:
-        return self.bot.user.display_avatar.url if self.player else "https://i.imgur.com/dIFBwU7.png"
-        
+        return (
+            self.bot.user.display_avatar.url
+            if self.player
+            else "https://i.imgur.com/dIFBwU7.png"
+        )
+
     def replace(self, text: str, variables: dict[str, str]) -> str:
-        if not text or text.isspace(): return
+        if not text or text.isspace():
+            return
         pattern = r"\{\{(.*?)\}\}"
         matches: list[str] = re.findall(pattern, text)
 
@@ -165,15 +182,27 @@ class Placeholders:
 
             # Split the true and false values
             if "//" in parts[1]:
-                true_value, false_value = [part.strip() for part in parts[1].split("//")]
+                true_value, false_value = [
+                    part.strip() for part in parts[1].split("//")
+                ]
             else:
                 true_value = parts[1].strip()
 
             try:
                 # Replace variable placeholders with their values
-                expression = re.sub(r'@@(.*?)@@', lambda x: "'" + variables.get(x.group(1), '') + "'", expression)
-                expression = re.sub(r"'(\d+)'", lambda x: str(int(x.group(1))), expression)
-                expression = re.sub(r"'(\d+)'\s*([><=!]+)\s*(\d+)", lambda x: f"{int(x.group(1))} {x.group(2)} {int(x.group(3))}", expression)
+                expression = re.sub(
+                    r"@@(.*?)@@",
+                    lambda x: "'" + variables.get(x.group(1), "") + "'",
+                    expression,
+                )
+                expression = re.sub(
+                    r"'(\d+)'", lambda x: str(int(x.group(1))), expression
+                )
+                expression = re.sub(
+                    r"'(\d+)'\s*([><=!]+)\s*(\d+)",
+                    lambda x: f"{int(x.group(1))} {x.group(2)} {int(x.group(3))}",
+                    expression,
+                )
 
                 # Evaluate the expression
                 result = eval(expression, {"__builtins__": None}, variables)
@@ -185,39 +214,47 @@ class Placeholders:
             except:
                 text = text.replace("{{" + match + "}}", "")
 
-        text = re.sub(r'@@(.*?)@@', lambda x: str(variables.get(x.group(1), '')), text)
+        text = re.sub(r"@@(.*?)@@", lambda x: str(variables.get(x.group(1), "")), text)
         return text
-    
+
+
 def build_embed(raw: dict[str, dict], placeholder: Placeholders) -> Embed:
     embed = Embed()
     try:
-        rv = {key: func() if callable(func) else func for key, func in placeholder.variables.items()}
+        rv = {
+            key: func() if callable(func) else func
+            for key, func in placeholder.variables.items()
+        }
         if author := raw.get("author"):
             embed.set_author(
-                name = placeholder.replace(author.get("name"), rv),
-                url = placeholder.replace(author.get("url"), rv),
-                icon_url = placeholder.replace(author.get("icon_url"), rv)
+                name=placeholder.replace(author.get("name"), rv),
+                url=placeholder.replace(author.get("url"), rv),
+                icon_url=placeholder.replace(author.get("icon_url"), rv),
             )
-        
+
         if title := raw.get("title"):
             embed.title = placeholder.replace(title.get("name"), rv)
             embed.url = placeholder.replace(title.get("url"), rv)
 
         if fields := raw.get("fields", []):
             for f in fields:
-                embed.add_field(name=placeholder.replace(f.get("name"), rv), value=placeholder.replace(f.get("value", ""), rv), inline=f.get("inline", False))
+                embed.add_field(
+                    name=placeholder.replace(f.get("name"), rv),
+                    value=placeholder.replace(f.get("value", ""), rv),
+                    inline=f.get("inline", False),
+                )
 
         if footer := raw.get("footer"):
             embed.set_footer(
-                text = placeholder.replace(footer.get("text"), rv),
-                icon_url = placeholder.replace(footer.get("icon_url"), rv)
-            ) 
+                text=placeholder.replace(footer.get("text"), rv),
+                icon_url=placeholder.replace(footer.get("icon_url"), rv),
+            )
 
         if thumbnail := raw.get("thumbnail"):
-            embed.set_thumbnail(url = placeholder.replace(thumbnail, rv))
-        
+            embed.set_thumbnail(url=placeholder.replace(thumbnail, rv))
+
         if image := raw.get("image"):
-            embed.set_image(url = placeholder.replace(image, rv))
+            embed.set_image(url=placeholder.replace(image, rv))
 
         embed.description = placeholder.replace(raw.get("description"), rv)
         embed.color = int(placeholder.replace(raw.get("color"), rv))

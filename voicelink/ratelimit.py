@@ -28,6 +28,7 @@ from typing import List, Optional, Dict, TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .pool import Node
 
+
 class YTToken:
     def __init__(self, token: str):
         self.token: str = token
@@ -41,10 +42,12 @@ class YTToken:
         """Determine if the token can be used again."""
         return time.time() >= self.allow_retry_time
 
+
 class YTRatelimit(ABC):
     """
     Abstract base class for YouTube rate limit strategies.
     """
+
     def __init__(self, node: "Node", tokens: List[str]) -> None:
         self.node: "Node" = node
         self.tokens: List[YTToken] = [YTToken(token) for token in tokens]
@@ -70,21 +73,30 @@ class YTRatelimit(ABC):
         If a new token is found, update it via the node and return it.
         """
         for token in self.tokens:
-            if token != self.active_token and (not token.is_flagged or token.allow_retry):
+            if token != self.active_token and (
+                not token.is_flagged or token.allow_retry
+            ):
                 try:
                     await self.node.update_refresh_yt_access_token(token)
                     self.active_token = token
                     return token
                 except Exception as e:
-                    self.node._logger.error("Something wrong while updating the youtube access token.", exc_info=e)
-        
-        self.node._logger.warning("No active token available for processing the request.")
+                    self.node._logger.error(
+                        "Something wrong while updating the youtube access token.",
+                        exc_info=e,
+                    )
+
+        self.node._logger.warning(
+            "No active token available for processing the request."
+        )
         return None
+
 
 class LoadBalance(YTRatelimit):
     """
     A rate limiting strategy that load balances requests across tokens.
     """
+
     def __init__(self, node: "Node", config: Dict[str, Any]):
         super().__init__(node, tokens=config.get("tokens", []))
         self._config: Dict[str, Any] = config.get("config", {})
@@ -98,7 +110,9 @@ class LoadBalance(YTRatelimit):
         if self.active_token:
             self.active_token.is_flagged = True
             self.active_token.flagged_time = time.time()
-            self.active_token.allow_retry_time = self.active_token.flagged_time + self._retry_time
+            self.active_token.allow_retry_time = (
+                self.active_token.flagged_time + self._retry_time
+            )
             await self.swap_token()
 
     async def handle_request(self) -> None:
@@ -113,8 +127,9 @@ class LoadBalance(YTRatelimit):
             self.active_token.requested_times = 0
             swapped_token = await self.swap_token()
             if swapped_token is None:
-                return self.node._logger.warning("No available token found after swapping.")
+                return self.node._logger.warning(
+                    "No available token found after swapping."
+                )
 
-STRATEGY = {
-    "LoadBalance": LoadBalance
-}
+
+STRATEGY = {"LoadBalance": LoadBalance}
