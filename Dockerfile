@@ -1,33 +1,53 @@
-# Stage 1: Build
-FROM python:3.12-slim-bookworm as builder
+# ╔═════════════════════════════════════════════════════╗
+# ║                       SETUP                         ║
+# ╚═════════════════════════════════════════════════════╝
+  # GLOBAL
+  ARG APP_UID=1000 \
+      APP_GID=1000
 
-# Install build dependencies (gcc, Python headers, etc.)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# ╔═════════════════════════════════════════════════════╗
+# ║                       BUILD                         ║
+# ╚═════════════════════════════════════════════════════╝
+  # VOCARD
+  FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
 
-# Set the working directory
-WORKDIR /app
+  ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+  ENV UV_PYTHON_DOWNLOADS=0
 
-# Copy only the requirements file to take advantage of Docker's caching
-COPY requirements.txt .
+  RUN set -ex; \
+      apk --update --no-cache add \
+      gcc \
+      python3-dev \
+      musl-dev \
+      linux-headers;
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+  WORKDIR /app
 
-# Stage 2: Runtime
-FROM python:3.12-slim-bookworm
+  RUN --mount=type=cache,target=/root/.cache/uv \
+      --mount=type=bind,source=uv.lock,target=uv.lock \
+      --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+      uv sync --locked --no-install-project --no-dev
 
-# Set the working directory
-WORKDIR /app
+  COPY . /app
 
-# Copy installed Python packages from the builder stage
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+  RUN --mount=type=cache,target=/root/.cache/uv \
+      uv sync --locked --no-dev
 
-# Copy the application code
-COPY . .
 
-# Run the application
-CMD ["python", "-u", "main.py"]
+# ╔═════════════════════════════════════════════════════╗
+# ║                       IMAGE                         ║
+# ╚═════════════════════════════════════════════════════╝
+  # HEADER
+  FROM python:3.12-alpine
+
+  ARG APP_UID \
+      APP_GID
+
+  WORKDIR /app
+
+  COPY --from=builder --chown=${APP_UID}:${APP_GID} /app /app
+
+  ENV PATH="/app/.venv/bin:$PATH"
+
+  USER ${APP_UID}:${APP_GID}
+  CMD ["python3", "-u", "main.py"]
