@@ -34,3 +34,63 @@ start = "uv run python -u main.py"
 lint = "uv run ruff check ."
 fmt = "uv run ruff format ."
 check = "uv run ty check"
+
+[tool.ruff]
+fix = true
+line-length = 120
+target-version = "py312"
+extend-exclude = [".cache"]
+output-format = "concise"
+unsafe-fixes = true
+
+[tool.ruff.lint]
+select = [
+    "ANN",  # flake8-annotations
+    "B",    # flake8-bugbear
+    "C",    # flake8-comprehensions
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "INT",  # flake8-gettext
+    "ISC",  # flake8-implicit-str-concat
+    "PIE",  # flake8-pie
+    "PLC",  # pylint convention
+    "PLE",  # pylint errors
+    "PLR",  # pylint refactor
+    "PLW",  # pylint warnings
+    "Q",    # flake8-quotes
+    "RET",  # flake8-return
+    "RSE",  # flake8-raise
+    "RUF",  # ruff specific rules
+    "S",    # bandit
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "TID",  # flake8-tidy-imports
+    "UP",   # pyupgrade
+    "W",    # pycodestyle
+]
+ignore = [
+    # Type Annotations
+    "ANN002","ANN003","ANN204","ANN206","ANN401",
+
+    # pseudo-random generators
+    "S311",
+
+    # magic values
+    "PLR2004",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+order-by-type = false
+case-sensitive = true
+combine-as-imports = true
