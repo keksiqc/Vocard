@@ -156,7 +156,7 @@
 
     "backVote": "{0} hat für das Überspringen zum vorherigen Song gestimmt. [{1}/{2}]",
     "backed": "{0} hat zum vorherigen Song übersprungen.",
-    
+
     "leaveVote": "{0} hat für das Anhalten des Players gestimmt. [{1}/{2}]",
     "left": "`{0}` hat den Player angehalten.",
 

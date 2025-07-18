@@ -85,9 +85,9 @@ services:
             timeout: 5s
             retries: 5
             start_period: 10s
-            
 
-    # vocard-dashboard: 
+
+    # vocard-dashboard:
     #     container_name: vocard-dashboard
     #     image: ghcr.io/chocomeow/vocard-dashboard:latest
     #     restart: unless-stopped

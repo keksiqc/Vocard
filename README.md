@@ -33,4 +33,3 @@ Please see the [Setup Page](https://docs.vocard.xyz) in the docs to run this bot
 
 ## Need Help?
 Join the [Vocard Support Discord](https://discord.gg/wRCgB7vBQv) for help or questions.
-

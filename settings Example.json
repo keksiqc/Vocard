@@ -19,7 +19,7 @@
                 },
                 "strategy": "LoadBalance"
             }
-        }   
+        }
     },
     "prefix": "?",
     "activity": [
