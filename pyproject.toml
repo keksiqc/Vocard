@@ -1,6 +1,6 @@
 [project]
 name = "vocard"
-version = "0.1.0"
+version = "2.8.0-beta.0"
 description = "Vocard is a simple music bot."
 readme = "README.md"
 authors = [
